@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "export", // Wajib untuk Electron (Static Export)
+  images: {
+    unoptimized: true, // Wajib karena tidak ada server Image Optimization di Electron
+  },
 };
 
 export default nextConfig;
