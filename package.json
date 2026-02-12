@@ -12,6 +12,10 @@
     "dist": "next build && electron-builder",
     "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/indra220/rekap-do-app.git"
+  },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.2.4",
@@ -46,20 +50,24 @@
     "typescript": "^5"
   },
   "build": {
-    "appId": "com.megaagrosanjaya.rekapdo",
-    "productName": "Aplikasi Rekap DO",
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "indra220",
-        "repo": "rekap-do-app",
-        "private": true
-      }
-    ],
-    "files": [
-      "out/**/*",
-      "main.js",
-      "package.json"
-    ]
+   "appId": "com.megaagrosanjaya.rekapdo",
+   "productName": "Aplikasi Rekap DO",
+   "directories": {
+    "output": "../Aplikasi Rekap DO"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "shortcutName": "Aplikasi Rekap DO",
+    "uninstallDisplayName": "Aplikasi Rekap DO"
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "files": [
+    "out/**/*",
+    "main.js",
+    "package.json"
+  ]
   }
 }
