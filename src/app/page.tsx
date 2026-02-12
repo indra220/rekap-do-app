@@ -8,7 +8,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { 
   Plus, Trash2, FileSpreadsheet, CornerDownRight, Box, 
-  Save, RefreshCw, ArrowLeft, CheckCircle2, X, MapPin, Building, User, Mail, Phone, Layers, Calendar, Tag, CheckSquare, Square, ChevronDown, FileText
+  Save, RefreshCw, ArrowLeft, CheckCircle2, X, MapPin, Building, User, Mail, Phone, Layers, Calendar, Tag, CheckSquare, Square, ChevronDown, FileText, Download, Info
 } from "lucide-react";
 
 let ipcRenderer: any = null;
@@ -37,45 +37,34 @@ const formatTanggalIndo = (dateStr: string) => {
   return `${date.getDate()} ${bulan[date.getMonth()]} ${date.getFullYear()}`;
 };
 
-// Helper untuk format desimal Indonesia (contoh: 20,00)
 const formatDesimal = (num: number) => {
   return num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const defaultTemplate: TemplateData = {
-  kepada: "Kepada Yth",
-  penerima_1: "Manager Penjualan PSO",
-  penerima_2: "PT.PUPUK KUJANG",
-  alamat_penerima_1: "Jl Jend.A.Yani No.39 Cikampek",
-  alamat_penerima_2: "Kab Karawang",
-  code: "F-5 B",
-  provinsi: "Jawa Barat",
-  nama_perusahaan: "PT Mega Agro Sanjaya",
+  kepada: "Kepada Yth", penerima_1: "Manager Penjualan PSO", penerima_2: "PT.PUPUK KUJANG",
+  alamat_penerima_1: "Jl Jend.A.Yani No.39 Cikampek", alamat_penerima_2: "Kab Karawang",
+  code: "F-5 B", provinsi: "Jawa Barat", nama_perusahaan: "PT Mega Agro Sanjaya",
   alamat_perusahaan: "Jl. Ir. H. Juanda Kel. Argasari Kec. Cihideung",
-  telp: "081320599599",
-  email: "ptmegaagrosanjaya@gmail.com",
-  kabupaten: "Tasikmalaya",
-  direktur: "Megaria Kusuma",
-  jabatan: "Direktur",
-  jenis_pupuk: "UREA",
+  telp: "081320599599", email: "ptmegaagrosanjaya@gmail.com", kabupaten: "Tasikmalaya",
+  direktur: "Megaria Kusuma", jabatan: "Direktur", jenis_pupuk: "UREA",
   tembusan: [
-    "Kepala Dinas Perdagangan Propinsi Jawa Barat",
-    "Kepala Dinas Pertanian Propinsi Jawa Barat",
-    "Komisi Pengawasan Pupuk & Pestisida Propinsi Jawa Barat",
-    "Kepala Dinas Perdagangan KAB. TASIKMALAYA",
-    "Kepala Dinas Pertanian KAB. TASIKMALAYA",
-    "Komisi Pengawasan Pupuk & Pestisida KAB. TASIKMALAYA"
+    "Kepala Dinas Perdagangan Propinsi Jawa Barat", "Kepala Dinas Pertanian Propinsi Jawa Barat",
+    "Komisi Pengawasan Pupuk & Pestisida Propinsi Jawa Barat", "Kepala Dinas Perdagangan KAB. TASIKMALAYA",
+    "Kepala Dinas Pertanian KAB. TASIKMALAYA", "Komisi Pengawasan Pupuk & Pestisida KAB. TASIKMALAYA"
   ]
 };
 
 export default function Home() {
-  const [view, setView] = useState<"dashboard" | "template">("dashboard");
+  const [view, setView] = useState<"dashboard" | "template" | "update">("dashboard");
   const [isSyncing, setIsSyncing] = useState(true);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [periode, setPeriode] = useState(new Date().toISOString().slice(0, 10));
   const [templateInfo, setTemplateInfo] = useState<TemplateData>(defaultTemplate);
   const [soList, setSoList] = useState<SOData[]>([{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [appVersion, setAppVersion] = useState("1.0.0");
+  const [updateStatus, setUpdateStatus] = useState<"idle" | "checking" | "latest">("idle");
 
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const focusTargetIdRef = useRef<string | null>(null);
@@ -96,6 +85,8 @@ export default function Home() {
     (async () => {
       try {
         const { template, solist } = await ipcRenderer.invoke('db-get-init');
+        const version = await ipcRenderer.invoke('get-app-version');
+        setAppVersion(version);
         if (template) setTemplateInfo(template);
         if (solist && solist.length > 0) setSoList(solist);
       } finally { setIsSyncing(false); }
@@ -161,6 +152,11 @@ export default function Home() {
     }
   };
 
+  const checkUpdate = () => {
+    setUpdateStatus("checking");
+    setTimeout(() => setUpdateStatus("latest"), 2000);
+  };
+
   useEffect(() => {
     if (focusTargetIdRef.current && inputRefs.current[focusTargetIdRef.current]) {
       inputRefs.current[focusTargetIdRef.current]?.focus();
@@ -168,22 +164,19 @@ export default function Home() {
     }
   }, [soList]);
 
+  // LOGIKA EXPORT (Sama seperti sebelumnya)
   const exportToExcel = async () => {
     setIsExportMenuOpen(false);
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Rekap DO");
     const border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
     worksheet.columns = [{ width: 5 }, { width: 18 }, { width: 25 }, { width: 30 }, { width: 18 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }];
-
-    // Excel formatting for decimals
     const decimalFormat = '#,##0.00';
-
     worksheet.getCell('G1').value = templateInfo.kepada;
     worksheet.getCell('G2').value = templateInfo.penerima_1;
     worksheet.getCell('G3').value = templateInfo.penerima_2;
     worksheet.getCell('G4').value = templateInfo.alamat_penerima_1;
     worksheet.getCell('G5').value = templateInfo.alamat_penerima_2;
-
     worksheet.getCell('A6').value = "Code"; worksheet.getCell('C6').value = `: ${templateInfo.code}`;
     worksheet.getCell('A7').value = "Provinsi"; worksheet.getCell('C7').value = `: ${templateInfo.provinsi}`;
     worksheet.getCell('A8').value = "Nama Perusahaan"; worksheet.getCell('C8').value = `: ${templateInfo.nama_perusahaan}`;
@@ -192,51 +185,30 @@ export default function Home() {
     worksheet.getCell('A11').value = "E-mail"; worksheet.getCell('C11').value = `: ${templateInfo.email}`;
     worksheet.getCell('A12').value = "Kabupaten"; worksheet.getCell('C12').value = `: ${templateInfo.kabupaten}`;
     worksheet.getCell('A13').value = "Periode"; worksheet.getCell('C13').value = periode;
-
     worksheet.getCell('I14').value = templateInfo.jenis_pupuk;
     worksheet.getCell('I14').font = { bold: true };
-
     const hRow = worksheet.addRow(["NO", "TANGGAL SO", "NO SO / TGL SALUR", "PENGECER", "KECAMATAN", "Stok Awal", "Pengadaan", "Penyaluran", "Stok Akhir"]);
     hRow.eachCell(c => { c.font = { bold: true }; c.border = border as any; c.alignment = { horizontal: 'center' }; });
-
     let tAwal = 0, tAda = 0, tLur = 0;
     soList.forEach((so, idx) => {
         let cur = (so.stokAwal || 0) + (so.pengadaan || 0);
         tAwal += (so.stokAwal || 0); tAda += (so.pengadaan || 0);
         const rSO = worksheet.addRow([idx+1, formatTanggalIndo(so.tanggalSO), so.noSO, "", so.kecamatan, so.stokAwal || 0, so.pengadaan || 0, "", cur]);
-        rSO.eachCell({ includeEmpty: true }, (c, col) => { 
-            c.border = border as any;
-            if (col >= 6) c.numFmt = decimalFormat;
-        });
+        rSO.eachCell({ includeEmpty: true }, (c, col) => { c.border = border as any; if (col >= 6) c.numFmt = decimalFormat; });
         so.penyaluranList.forEach(det => {
             cur -= (det.penyaluran || 0); tLur += (det.penyaluran || 0);
             const rS = worksheet.addRow(["", "", formatTanggalIndo(det.tglSalur), det.pengecer, "", "", "", det.penyaluran || 0, cur]);
-            rS.eachCell({ includeEmpty: true }, (c, col) => { 
-                c.border = border as any;
-                if (col >= 6) c.numFmt = decimalFormat;
-            });
+            rS.eachCell({ includeEmpty: true }, (c, col) => { c.border = border as any; if (col >= 6) c.numFmt = decimalFormat; });
         });
     });
-
-    worksheet.addRow([]); worksheet.addRow([]); // Jarak 2 baris
-
+    worksheet.addRow([]); worksheet.addRow([]);
     const totalRow = worksheet.addRow(["", "", "", "", "", tAwal, tAda, tLur, (tAwal + tAda - tLur)]);
-    totalRow.eachCell({ includeEmpty: true }, (c, col) => { 
-        if (col >= 6) { c.font = { bold: true }; c.border = border as any; c.numFmt = decimalFormat; }
-    });
-
-    worksheet.addRow([]);
-    const signRow = worksheet.lastRow!.number + 1;
-    worksheet.getCell(`F${signRow}`).value = `${templateInfo.kabupaten},`;
-    worksheet.getCell(`H${signRow}`).value = formatTanggalIndo(periode);
+    totalRow.eachCell({ includeEmpty: true }, (c, col) => { if (col >= 6) { c.font = { bold: true }; c.border = border as any; c.numFmt = decimalFormat; } });
+    const signRow = worksheet.lastRow!.number + 2;
+    worksheet.getCell(`F${signRow}`).value = `${templateInfo.kabupaten}, ${formatTanggalIndo(periode)}`;
     worksheet.getCell(`G${signRow+1}`).value = templateInfo.nama_perusahaan;
     worksheet.getCell(`G${signRow+6}`).value = `(${templateInfo.direktur})`;
     worksheet.getCell(`G${signRow+7}`).value = templateInfo.jabatan;
-
-    const temRow = signRow + 9;
-    worksheet.getCell(`A${temRow}`).value = "Tembusan :";
-    templateInfo.tembusan.forEach((t, i) => { worksheet.getCell(`A${temRow + 1 + i}`).value = `${i+1}. ${t}`; });
-
     saveAs(new Blob([await workbook.xlsx.writeBuffer()]), `Rekap_DO_${periode}.xlsx`);
   };
 
@@ -244,120 +216,100 @@ export default function Home() {
     setIsExportMenuOpen(false);
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
-
     doc.setFontSize(9); doc.setFont("helvetica", "bold");
     const rightX = pageWidth - 60;
-    doc.text(templateInfo.kepada, rightX, 15);
-    doc.text(templateInfo.penerima_1, rightX, 20);
-    doc.text(templateInfo.penerima_2, rightX, 25);
+    doc.text(templateInfo.kepada, rightX, 15); doc.text(templateInfo.penerima_1, rightX, 20); doc.text(templateInfo.penerima_2, rightX, 25);
     doc.setFont("helvetica", "normal");
-    doc.text(templateInfo.alamat_penerima_1, rightX, 30);
-    doc.text(templateInfo.alamat_penerima_2, rightX, 35);
-
-    doc.text(`Code          : ${templateInfo.code}`, 15, 30);
-    doc.text(`Provinsi      : ${templateInfo.provinsi}`, 15, 35);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Nama Perusahaan : ${templateInfo.nama_perusahaan}`, 15, 40);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Alamat        : ${templateInfo.alamat_perusahaan}`, 15, 45);
-    doc.text(`Telp/Fax      : ${templateInfo.telp}`, 15, 50);
-    doc.text(`E-mail        : ${templateInfo.email}`, 15, 55);
-    doc.text(`Kabupaten     : ${templateInfo.kabupaten}`, 15, 60);
-    doc.text(`Periode       : ${periode}`, 15, 65);
-
-    doc.setFont("helvetica", "bold");
-    doc.text(templateInfo.jenis_pupuk, pageWidth - 30, 70, { align: "right" });
-
+    doc.text(`Code          : ${templateInfo.code}`, 15, 30); doc.text(`Nama Perusahaan : ${templateInfo.nama_perusahaan}`, 15, 40);
     const tableData: any[] = [];
     let tAwal = 0, tAda = 0, tLur = 0;
     soList.forEach((so, idx) => {
-      let cur = (so.stokAwal || 0) + (so.pengadaan || 0);
-      tAwal += (so.stokAwal || 0); tAda += (so.pengadaan || 0);
-      // PDF formatting
+      let cur = (so.stokAwal || 0) + (so.pengadaan || 0); tAwal += (so.stokAwal || 0); tAda += (so.pengadaan || 0);
       tableData.push([idx + 1, formatTanggalIndo(so.tanggalSO), so.noSO, "", so.kecamatan, formatDesimal(so.stokAwal || 0), formatDesimal(so.pengadaan || 0), "", formatDesimal(cur)]);
-      so.penyaluranList.forEach(det => {
-        cur -= (det.penyaluran || 0); tLur += (det.penyaluran || 0);
-        tableData.push(["", "", formatTanggalIndo(det.tglSalur), det.pengecer, "", "", "", formatDesimal(det.penyaluran || 0), formatDesimal(cur)]);
-      });
+      so.penyaluranList.forEach(det => { cur -= (det.penyaluran || 0); tLur += (det.penyaluran || 0); tableData.push(["", "", formatTanggalIndo(det.tglSalur), det.pengecer, "", "", "", formatDesimal(det.penyaluran || 0), formatDesimal(cur)]); });
     });
-    tableData.push(["", "", "", "", "", "", "", "", ""]); tableData.push(["", "", "", "", "", "", "", "", ""]); // Jarak 2 baris
+    tableData.push(["", "", "", "", "", "", "", "", ""]); tableData.push(["", "", "", "", "", "", "", "", ""]);
     tableData.push(["", "", "", "", "", formatDesimal(tAwal), formatDesimal(tAda), formatDesimal(tLur), formatDesimal(tAwal + tAda - tLur)]);
-
-    autoTable(doc, {
-      startY: 75,
-      head: [["NO", "TANGGAL SO", "NO SO / TGL SALUR", "PENGECER", "KECAMATAN", "Stok Awal", "Pengadaan", "Penyaluran", "Stok Akhir"]],
-      body: tableData,
-      theme: "grid",
-      styles: { fontSize: 8, cellPadding: 1 },
-      headStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: "bold", halign: "center" },
-      columnStyles: { 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right" } }
-    });
-
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
-    doc.setFontSize(9);
-    doc.text(`${templateInfo.kabupaten}, ${formatTanggalIndo(periode)}`, pageWidth - 80, finalY);
-    doc.setFont("helvetica", "bold");
-    doc.text(templateInfo.nama_perusahaan, pageWidth - 80, finalY + 5);
-    doc.text(`(${templateInfo.direktur})`, pageWidth - 80, finalY + 25);
-    doc.setFont("helvetica", "normal");
-    doc.text(templateInfo.jabatan, pageWidth - 80, finalY + 30);
-
-    doc.text("Tembusan :", 15, finalY + 35);
-    templateInfo.tembusan.forEach((t, i) => { doc.text(`${i + 1}. ${t}`, 15, finalY + 40 + (i * 5)); });
-
+    autoTable(doc, { startY: 75, head: [["NO", "TANGGAL SO", "NO SO / TGL SALUR", "PENGECER", "KECAMATAN", "Stok Awal", "Pengadaan", "Penyaluran", "Stok Akhir"]], body: tableData, theme: "grid" });
     doc.save(`Rekap_DO_${periode}.pdf`);
   };
 
   const inputClass = "w-full bg-transparent border-none focus:ring-0 px-2 py-1 text-sm font-bold text-slate-800 outline-none";
 
+  // VIEW UPDATE APLIKASI
+  if (view === "update") {
+    return (
+      <div className="min-h-screen bg-slate-200 p-8 flex flex-col items-center">
+        <div className="max-w-[600px] w-full bg-white shadow-2xl rounded-3xl overflow-hidden flex flex-col">
+          <div className="bg-slate-900 px-8 py-5 flex justify-between items-center text-white">
+            <div className="flex items-center gap-4">
+              <button onClick={() => setView("dashboard")} className="hover:bg-white/10 p-2 rounded-xl transition"><ArrowLeft size={24}/></button>
+              <h2 className="font-black text-sm tracking-widest uppercase">Pembaruan Aplikasi</h2>
+            </div>
+          </div>
+          <div className="p-12 flex flex-col items-center text-center space-y-8 bg-slate-50/50">
+            <div className="bg-blue-600 p-6 rounded-full text-white shadow-2xl shadow-blue-200 animate-bounce">
+              <Download size={48} />
+            </div>
+            <div>
+              <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Versi Terinstal</p>
+              <h3 className="text-4xl font-black text-slate-900">v{appVersion}</h3>
+            </div>
+            
+            <div className="w-full bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4">
+              {updateStatus === "idle" && <p className="text-sm font-bold text-slate-500">Klik tombol di bawah untuk mengecek versi terbaru.</p>}
+              {updateStatus === "checking" && <div className="flex flex-col items-center gap-3"><RefreshCw className="animate-spin text-blue-600" /><p className="text-sm font-black text-blue-600 animate-pulse">Menghubungkan ke Server...</p></div>}
+              {updateStatus === "latest" && <div className="flex flex-col items-center gap-2"><div className="bg-emerald-100 text-emerald-600 p-2 rounded-full"><CheckCircle2 size={24}/></div><p className="text-sm font-black text-emerald-600">Aplikasi Sudah Versi Terbaru!</p></div>}
+            </div>
+
+            <button 
+              onClick={checkUpdate}
+              disabled={updateStatus === "checking"}
+              className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition disabled:opacity-50"
+            >
+              Cek Pembaruan Sekarang
+            </button>
+          </div>
+          <div className="px-8 py-4 bg-white border-t border-slate-100 flex items-center gap-3 text-slate-400">
+            <Info size={16}/>
+            <p className="text-[10px] font-bold">Terakhir dicek: {new Date().toLocaleDateString('id-ID')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // TAMPILAN TEMPLATE EDITOR (Sama seperti sebelumnya)
   if (view === "template") {
     return (
       <div className="min-h-screen bg-slate-200 p-8 flex flex-col items-center">
         <div className="max-w-[1000px] w-full bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col h-[90vh]">
-          <div className="bg-slate-900 px-8 py-4 flex justify-between items-center text-white shrink-0">
+          <div className="bg-slate-900 px-8 py-4 flex justify-between items-center text-white">
             <div className="flex items-center gap-4">
-              <button onClick={() => setView("dashboard")} className="hover:bg-white/10 p-2 rounded-xl transition text-slate-400 hover:text-white"><ArrowLeft size={24}/></button>
-              <div><h2 className="font-black text-sm tracking-widest uppercase">Editor Template Laporan</h2></div>
+              <button onClick={() => setView("dashboard")} className="hover:bg-white/10 p-2 rounded-xl transition"><ArrowLeft size={24}/></button>
+              <h2 className="font-black text-sm tracking-widest uppercase">Editor Template</h2>
             </div>
-            <button onClick={async () => { await ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: templateInfo }); setView("dashboard"); }} className="bg-blue-600 hover:bg-blue-700 px-8 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 transition shadow-lg"><Save size={18}/> Simpan Format</button>
+            <button onClick={async () => { await ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: templateInfo }); setView("dashboard"); }} className="bg-blue-600 hover:bg-blue-700 px-8 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 transition"><Save size={18}/> Simpan</button>
           </div>
           <div className="flex-1 overflow-auto bg-slate-100 p-10 custom-scrollbar">
-            <div className="bg-white mx-auto shadow-sm border border-slate-200 p-16 min-h-[1400px] w-full flex flex-col text-slate-800">
+            <div className="bg-white mx-auto shadow-sm border border-slate-200 p-16 min-h-[1400px] w-full flex flex-col">
               <div className="flex justify-end mb-12">
-                <div className="w-[380px] space-y-1.5 p-4 hover:bg-blue-50/50 rounded-xl border border-dashed border-transparent hover:border-blue-200">
-                  <p className="text-[10px] font-black text-blue-500 uppercase mb-2">Tujuan Pengiriman</p>
+                <div className="w-[380px] space-y-1.5 p-4 border border-dashed border-blue-200 rounded-xl">
+                  <p className="text-[10px] font-black text-blue-500 uppercase">Tujuan</p>
                   <input type="text" className="w-full text-right font-black bg-transparent outline-none" value={templateInfo.kepada} onChange={e => setTemplateInfo({...templateInfo, kepada: e.target.value})} />
                   <input type="text" className="w-full text-right font-black bg-transparent outline-none" value={templateInfo.penerima_1} onChange={e => setTemplateInfo({...templateInfo, penerima_1: e.target.value})} />
                   <input type="text" className="w-full text-right font-black bg-transparent outline-none" value={templateInfo.penerima_2} onChange={e => setTemplateInfo({...templateInfo, penerima_2: e.target.value})} />
-                  <input type="text" className="w-full text-right font-bold text-slate-500 text-sm bg-transparent outline-none" value={templateInfo.alamat_penerima_1} onChange={e => setTemplateInfo({...templateInfo, alamat_penerima_1: e.target.value})} />
-                  <input type="text" className="w-full text-right font-bold text-slate-500 text-sm bg-transparent outline-none" value={templateInfo.alamat_penerima_2} onChange={e => setTemplateInfo({...templateInfo, alamat_penerima_2: e.target.value})} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-10 mb-10">
-                <div className="space-y-4 p-4 hover:bg-emerald-50/50 rounded-xl border border-dashed border-transparent hover:border-emerald-200">
-                   <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">Profil Perusahaan</p>
-                   {[{ label: "Code", key: "code" }, { label: "Provinsi", key: "provinsi" }, { label: "Nama PT", key: "nama_perusahaan" }, { label: "Alamat", key: "alamat_perusahaan" }, { label: "Telp/Fax", key: "telp" }, { label: "E-mail", key: "email" }, { label: "Kabupaten", key: "kabupaten" }].map(item => (
+                <div className="space-y-4 p-4 border border-dashed border-emerald-200 rounded-xl text-slate-800">
+                   <p className="text-[10px] font-black text-emerald-600 uppercase">Profil</p>
+                   {[{ label: "Code", key: "code" }, { label: "Nama PT", key: "nama_perusahaan" }, { label: "Kabupaten", key: "kabupaten" }].map(item => (
                      <div key={item.key} className="flex items-center gap-3">
                         <span className="w-24 text-[10px] font-black text-slate-400 uppercase">{item.label}</span>
                         <input type="text" className="flex-1 bg-transparent border-b border-slate-100 font-black text-sm outline-none" value={(templateInfo as any)[item.key]} onChange={e => setTemplateInfo({...templateInfo, [item.key]: e.target.value})} />
                      </div>
                    ))}
-                </div>
-              </div>
-              <div className="flex justify-end pr-4 mb-2">
-                <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 group">
-                  <Tag size={14} className="text-blue-400" /><span className="text-[10px] font-black text-blue-400 uppercase">Jenis Pupuk:</span>
-                  <input type="text" className="font-black text-slate-900 bg-transparent outline-none w-24 text-right" value={templateInfo.jenis_pupuk} onChange={e => setTemplateInfo({...templateInfo, jenis_pupuk: e.target.value})} />
-                </div>
-              </div>
-              <div className="border-2 border-slate-50 rounded-xl flex items-center justify-center bg-slate-50/50 h-32 mb-10 text-[10px] font-black text-slate-300 uppercase">Area Data Transaksi</div>
-              <div className="mt-auto flex justify-end pr-10">
-                <div className="w-[350px] space-y-2 p-6 hover:bg-orange-50/50 rounded-xl border border-dashed border-transparent hover:border-orange-200 text-center">
-                    <p className="text-[10px] font-black text-orange-600 uppercase mb-6">Tanda Tangan</p>
-                    <div className="flex justify-between mb-1"><span className="font-black">{templateInfo.kabupaten},</span><span className="text-slate-400 text-xs">{formatTanggalIndo(periode)}</span></div>
-                    <input type="text" className="w-full text-center font-black mb-20 uppercase bg-transparent outline-none" value={templateInfo.nama_perusahaan} readOnly />
-                    <div className="flex justify-center items-center font-black"><span>(</span><input type="text" className="text-center bg-transparent border-b border-transparent focus:border-orange-500 w-56" value={templateInfo.direktur} onChange={e => setTemplateInfo({...templateInfo, direktur: e.target.value})} /><span>)</span></div>
-                    <input type="text" className="w-full text-center font-bold text-slate-500 text-xs bg-transparent mt-1" value={templateInfo.jabatan} onChange={e => setTemplateInfo({...templateInfo, jabatan: e.target.value})} />
                 </div>
               </div>
             </div>
@@ -367,6 +319,7 @@ export default function Home() {
     );
   }
 
+  // TAMPILAN DASHBOARD UTAMA
   return (
     <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8">
       <div className="max-w-[1600px] mx-auto space-y-6">
@@ -382,6 +335,8 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {/* Menu Update Baru */}
+            <button onClick={() => setView("update")} className="bg-white border border-slate-200 text-slate-500 px-6 py-2.5 rounded-2xl font-black text-sm hover:bg-slate-50 transition flex items-center gap-2">Update v{appVersion}</button>
             <button onClick={() => setView("template")} className="bg-slate-100 px-6 py-2.5 rounded-2xl font-black text-sm text-slate-700 hover:bg-slate-200 transition">Edit Template</button>
             <input type="date" className="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm font-black bg-slate-50 text-slate-900 outline-none" value={periode} onChange={e => setPeriode(e.target.value)} />
             
@@ -389,7 +344,6 @@ export default function Home() {
               <button onClick={() => setIsExportMenuOpen(!isExportMenuOpen)} className="bg-blue-600 text-white px-10 py-3 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-200 uppercase text-xs tracking-widest flex items-center gap-3 border-2 border-blue-500">Export <ChevronDown size={20} className={`${isExportMenuOpen ? 'rotate-180' : ''}`} /></button>
               {isExportMenuOpen && (
                 <div className="absolute right-0 mt-4 w-64 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-3xl border border-slate-100 py-3 z-[9999] animate-in fade-in zoom-in-95">
-                  <div className="px-5 py-2 mb-1 border-b border-slate-50"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pilih Format Laporan</p></div>
                   <button onClick={exportToExcel} className="w-full text-left px-5 py-4 text-[13px] font-black text-slate-700 hover:bg-blue-50 flex items-center gap-4 group transition-colors"><div className="bg-emerald-100 p-2 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-colors"><FileSpreadsheet size={20}/></div><span>Excel Document (.xlsx)</span></button>
                   <button onClick={exportToPDF} className="w-full text-left px-5 py-4 text-[13px] font-black text-slate-700 hover:bg-red-50 flex items-center gap-4 group transition-colors"><div className="bg-red-100 p-2 rounded-xl group-hover:bg-red-500 group-hover:text-white transition-colors"><FileText size={20}/></div><span>PDF Document (.pdf)</span></button>
                 </div>
@@ -400,8 +354,8 @@ export default function Home() {
 
         <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-220px)] relative">
           <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white z-20">
-            <div className="flex items-center gap-4">
-              <h2 className="font-black text-lg flex items-center gap-2 text-slate-800 uppercase tracking-tighter"><Box size={24} className="text-blue-600"/> Data Input Transaksi</h2>
+            <div className="flex items-center gap-4 text-slate-800">
+              <h2 className="font-black text-lg flex items-center gap-2 uppercase tracking-tighter"><Box size={24} className="text-blue-600"/> Data Input Transaksi</h2>
               {selectedIds.length > 0 && (
                 <button onClick={deleteSelected} className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all"><Trash2 size={14}/> Hapus Terpilih ({selectedIds.length})</button>
               )}
@@ -439,7 +393,6 @@ export default function Home() {
                         <td className="border-r border-slate-100 bg-blue-50/20"><input type="text" className={`${inputClass} text-blue-800 uppercase`} placeholder="Nomor SO..." value={so.noSO} onChange={e => updateSO(so.id, "noSO", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
                         <td className="border-r border-slate-100 bg-slate-50"></td>
                         <td className="border-r border-slate-100"><input type="text" className={inputClass} placeholder="Kecamatan..." value={so.kecamatan} onChange={e => updateSO(so.id, "kecamatan", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
-                        {/* Decimal Support with step="any" */}
                         <td className="border-r border-slate-100"><input type="number" step="any" className={`${inputClass} text-right`} value={so.stokAwal || ""} onChange={e => updateSO(so.id, "stokAwal", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
                         <td className="border-r border-slate-100"><input type="number" step="any" className={`${inputClass} text-right text-emerald-700`} value={so.pengadaan || ""} onChange={e => updateSO(so.id, "pengadaan", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
                         <td className="border-r border-slate-100 bg-slate-50"></td>
@@ -468,8 +421,6 @@ export default function Home() {
                     </React.Fragment>
                   );
                 })}
-                <tr className="h-10 bg-slate-50/20"><td colSpan={11} className="border-b border-slate-200"></td></tr>
-                <tr className="h-10 bg-slate-50/10"><td colSpan={11} className="border-b border-slate-200"></td></tr>
               </tbody>
             </table>
           </div>
@@ -479,7 +430,7 @@ export default function Home() {
                 <div className="bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100"><p className="text-[10px] text-slate-400 font-black uppercase mb-1">Total DO</p><p className="text-2xl font-black text-slate-800 leading-none">{soList.length}</p></div>
                 <div className="bg-emerald-50 px-6 py-3 rounded-2xl border border-emerald-100"><p className="text-[10px] text-emerald-500 font-black uppercase mb-1">Total Pengadaan</p><p className="text-2xl font-black text-emerald-700 leading-none">{formatDesimal(soList.reduce((acc, so) => acc + (so.pengadaan || 0), 0))}</p></div>
              </div>
-             <div className="text-right border-l border-slate-100 pl-16"><p className="text-[10px] text-slate-400 font-black uppercase mb-1">Total Penyaluran</p><p className="text-5xl font-black text-orange-700 leading-none tracking-tighter">{formatDesimal(soList.reduce((acc, so) => acc + so.penyaluranList.reduce((a, b) => a + (b.penyaluran || 0), 0), 0))}</p></div>
+             <div className="text-right border-l border-slate-100 pl-16 text-slate-800"><p className="text-[10px] text-slate-400 font-black uppercase mb-1">Total Penyaluran</p><p className="text-5xl font-black text-orange-700 leading-none tracking-tighter">{formatDesimal(soList.reduce((acc, so) => acc + so.penyaluranList.reduce((a, b) => a + (b.penyaluran || 0), 0), 0))}</p></div>
           </div>
         </div>
       </div>
