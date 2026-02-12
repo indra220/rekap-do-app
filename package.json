@@ -52,6 +52,9 @@
   "build": {
     "appId": "com.megaagrosanjaya.rekapdo",
     "productName": "Aplikasi Rekap DO",
+    "directories": {
+      "output": "../Aplikasi Rekap DO"
+    },
     "publish": [
       {
         "provider": "github",
