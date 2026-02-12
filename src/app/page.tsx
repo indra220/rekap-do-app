@@ -19,12 +19,21 @@ if (typeof window !== "undefined" && (window as any).require) {
 interface PenyaluranData { id: string; tglSalur: string; pengecer: string; penyaluran: number; }
 interface SOData { id: string; tanggalSO: string; noSO: string; kecamatan: string; stokAwal: number; pengadaan: number; penyaluranList: PenyaluranData[]; }
 interface TemplateData {
-  kepada: string; penerima_1: string; penerima_2: string;
-  alamat_penerima_1: string; alamat_penerima_2: string;
-  code: string; provinsi: string; nama_perusahaan: string;
-  alamat_perusahaan: string; telp: string; email: string;
-  kabupaten: string; direktur: string; jabatan: string;
+  kepada: string; 
+  penerima_1: string; 
+  penerima_2: string;
+  alamat_penerima_1: string; 
+  alamat_penerima_2: string;
+  code: string; 
+  provinsi: string; 
+  nama_perusahaan: string;
+  alamat_perusahaan: string; 
+  telp: string; 
+  email: string;
+  kabupaten: string; 
   jenis_pupuk: string;
+  direktur: string; 
+  jabatan: string;
   tembusan: string[];
 }
 
@@ -42,16 +51,28 @@ const formatDesimal = (num: number) => {
 };
 
 const defaultTemplate: TemplateData = {
-  kepada: "Kepada Yth", penerima_1: "Manager Penjualan PSO", penerima_2: "PT.PUPUK KUJANG",
-  alamat_penerima_1: "Jl Jend.A.Yani No.39 Cikampek", alamat_penerima_2: "Kab Karawang",
-  code: "F-5 B", provinsi: "Jawa Barat", nama_perusahaan: "PT Mega Agro Sanjaya",
+  kepada: "Kepada Yth", 
+  penerima_1: "Manager Penjualan PSO", 
+  penerima_2: "PT.PUPUK KUJANG",
+  alamat_penerima_1: "Jl Jend.A.Yani No.39 Cikampek", 
+  alamat_penerima_2: "Kab Karawang",
+  code: "F-5 B", 
+  provinsi: "Jawa Barat", 
+  nama_perusahaan: "PT Mega Agro Sanjaya",
   alamat_perusahaan: "Jl. Ir. H. Juanda Kel. Argasari Kec. Cihideung",
-  telp: "081320599599", email: "ptmegaagrosanjaya@gmail.com", kabupaten: "Tasikmalaya",
-  direktur: "Megaria Kusuma", jabatan: "Direktur", jenis_pupuk: "UREA",
+  telp: "081320599599", 
+  email: "ptmegaagrosanjaya@gmail.com", 
+  kabupaten: "Tasikmalaya",
+  jenis_pupuk: "UREA",
+  direktur: "Megaria Kusuma", 
+  jabatan: "Direktur", 
   tembusan: [
-    "Kepala Dinas Perdagangan Propinsi Jawa Barat", "Kepala Dinas Pertanian Propinsi Jawa Barat",
-    "Komisi Pengawasan Pupuk & Pestisida Propinsi Jawa Barat", "Kepala Dinas Perdagangan KAB. TASIKMALAYA",
-    "Kepala Dinas Pertanian KAB. TASIKMALAYA", "Komisi Pengawasan Pupuk & Pestisida KAB. TASIKMALAYA"
+    "Kepala Dinas Perdagangan Propinsi Jawa Barat", 
+    "Kepala Dinas Pertanian Propinsi Jawa Barat",
+    "Komisi Pengawasan Pupuk & Pestisida Propinsi Jawa Barat", 
+    "Kepala Dinas Perdagangan KAB. TASIKMALAYA",
+    "Kepala Dinas Pertanian KAB. TASIKMALAYA", 
+    "Komisi Pengawasan Pupuk & Pestisida KAB. TASIKMALAYA"
   ]
 };
 
@@ -164,7 +185,6 @@ export default function Home() {
     }
   }, [soList]);
 
-  // LOGIKA EXPORT (Sama seperti sebelumnya)
   const exportToExcel = async () => {
     setIsExportMenuOpen(false);
     const workbook = new ExcelJS.Workbook();
@@ -172,23 +192,39 @@ export default function Home() {
     const border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
     worksheet.columns = [{ width: 5 }, { width: 18 }, { width: 25 }, { width: 30 }, { width: 18 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }];
     const decimalFormat = '#,##0.00';
+    
+    // Header Kanan (Baris 1-5, Kolom G)
     worksheet.getCell('G1').value = templateInfo.kepada;
     worksheet.getCell('G2').value = templateInfo.penerima_1;
     worksheet.getCell('G3').value = templateInfo.penerima_2;
     worksheet.getCell('G4').value = templateInfo.alamat_penerima_1;
     worksheet.getCell('G5').value = templateInfo.alamat_penerima_2;
-    worksheet.getCell('A6').value = "Code"; worksheet.getCell('C6').value = `: ${templateInfo.code}`;
-    worksheet.getCell('A7').value = "Provinsi"; worksheet.getCell('C7').value = `: ${templateInfo.provinsi}`;
-    worksheet.getCell('A8').value = "Nama Perusahaan"; worksheet.getCell('C8').value = `: ${templateInfo.nama_perusahaan}`;
-    worksheet.getCell('A9').value = "Alamat"; worksheet.getCell('C9').value = `: ${templateInfo.alamat_perusahaan}`;
-    worksheet.getCell('A10').value = "Telp/Fax"; worksheet.getCell('C10').value = `: ${templateInfo.telp}`;
-    worksheet.getCell('A11').value = "E-mail"; worksheet.getCell('C11').value = `: ${templateInfo.email}`;
-    worksheet.getCell('A12').value = "Kabupaten"; worksheet.getCell('C12').value = `: ${templateInfo.kabupaten}`;
-    worksheet.getCell('A13').value = "Periode"; worksheet.getCell('C13').value = periode;
+    
+    // Header Kiri (Baris 6-13, Kolom A & C)
+    const labels = [
+      ["Code", templateInfo.code],
+      ["Provinsi", templateInfo.provinsi],
+      ["Nama Perusahaan", templateInfo.nama_perusahaan],
+      ["Alamat", templateInfo.alamat_perusahaan],
+      ["Telp/Fax", templateInfo.telp],
+      ["E-mail", templateInfo.email],
+      ["Kabupaten", templateInfo.kabupaten],
+      ["Periode", periode]
+    ];
+
+    labels.forEach((item, idx) => {
+      const row = 6 + idx;
+      worksheet.getCell(`A${row}`).value = item[0];
+      worksheet.getCell(`C${row}`).value = row === 13 ? item[1] : `: ${item[1]}`;
+    });
+    
+    // Jenis Pupuk (Baris 14, Kolom I)
     worksheet.getCell('I14').value = templateInfo.jenis_pupuk;
     worksheet.getCell('I14').font = { bold: true };
+
     const hRow = worksheet.addRow(["NO", "TANGGAL SO", "NO SO / TGL SALUR", "PENGECER", "KECAMATAN", "Stok Awal", "Pengadaan", "Penyaluran", "Stok Akhir"]);
     hRow.eachCell(c => { c.font = { bold: true }; c.border = border as any; c.alignment = { horizontal: 'center' }; });
+    
     let tAwal = 0, tAda = 0, tLur = 0;
     soList.forEach((so, idx) => {
         let cur = (so.stokAwal || 0) + (so.pengadaan || 0);
@@ -201,9 +237,11 @@ export default function Home() {
             rS.eachCell({ includeEmpty: true }, (c, col) => { c.border = border as any; if (col >= 6) c.numFmt = decimalFormat; });
         });
     });
+    
     worksheet.addRow([]); worksheet.addRow([]);
     const totalRow = worksheet.addRow(["", "", "", "", "", tAwal, tAda, tLur, (tAwal + tAda - tLur)]);
     totalRow.eachCell({ includeEmpty: true }, (c, col) => { if (col >= 6) { c.font = { bold: true }; c.border = border as any; c.numFmt = decimalFormat; } });
+    
     const signRow = worksheet.lastRow!.number + 2;
     worksheet.getCell(`F${signRow}`).value = `${templateInfo.kabupaten}, ${formatTanggalIndo(periode)}`;
     worksheet.getCell(`G${signRow+1}`).value = templateInfo.nama_perusahaan;
@@ -216,11 +254,28 @@ export default function Home() {
     setIsExportMenuOpen(false);
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
-    doc.setFontSize(9); doc.setFont("helvetica", "bold");
-    const rightX = pageWidth - 60;
-    doc.text(templateInfo.kepada, rightX, 15); doc.text(templateInfo.penerima_1, rightX, 20); doc.text(templateInfo.penerima_2, rightX, 25);
+    doc.setFontSize(8); doc.setFont("helvetica", "bold");
+    
+    const rightX = pageWidth - 70;
+    doc.text(templateInfo.kepada, rightX, 10);
+    doc.text(templateInfo.penerima_1, rightX, 14);
+    doc.text(templateInfo.penerima_2, rightX, 18);
+    doc.text(templateInfo.alamat_penerima_1, rightX, 22);
+    doc.text(templateInfo.alamat_penerima_2, rightX, 26);
+    
     doc.setFont("helvetica", "normal");
-    doc.text(`Code          : ${templateInfo.code}`, 15, 30); doc.text(`Nama Perusahaan : ${templateInfo.nama_perusahaan}`, 15, 40);
+    doc.text(`Code               : ${templateInfo.code}`, 15, 30);
+    doc.text(`Provinsi           : ${templateInfo.provinsi}`, 15, 34);
+    doc.text(`Nama Perusahaan    : ${templateInfo.nama_perusahaan}`, 15, 38);
+    doc.text(`Alamat             : ${templateInfo.alamat_perusahaan}`, 15, 42);
+    doc.text(`Telp/Fax           : ${templateInfo.telp}`, 15, 46);
+    doc.text(`E-mail             : ${templateInfo.email}`, 15, 50);
+    doc.text(`Kabupaten          : ${templateInfo.kabupaten}`, 15, 54);
+    doc.text(`Periode            : ${periode}`, 15, 58);
+
+    doc.setFont("helvetica", "bold");
+    doc.text(templateInfo.jenis_pupuk, pageWidth - 25, 62);
+
     const tableData: any[] = [];
     let tAwal = 0, tAda = 0, tLur = 0;
     soList.forEach((so, idx) => {
@@ -228,90 +283,94 @@ export default function Home() {
       tableData.push([idx + 1, formatTanggalIndo(so.tanggalSO), so.noSO, "", so.kecamatan, formatDesimal(so.stokAwal || 0), formatDesimal(so.pengadaan || 0), "", formatDesimal(cur)]);
       so.penyaluranList.forEach(det => { cur -= (det.penyaluran || 0); tLur += (det.penyaluran || 0); tableData.push(["", "", formatTanggalIndo(det.tglSalur), det.pengecer, "", "", "", formatDesimal(det.penyaluran || 0), formatDesimal(cur)]); });
     });
-    tableData.push(["", "", "", "", "", "", "", "", ""]); tableData.push(["", "", "", "", "", "", "", "", ""]);
     tableData.push(["", "", "", "", "", formatDesimal(tAwal), formatDesimal(tAda), formatDesimal(tLur), formatDesimal(tAwal + tAda - tLur)]);
-    autoTable(doc, { startY: 75, head: [["NO", "TANGGAL SO", "NO SO / TGL SALUR", "PENGECER", "KECAMATAN", "Stok Awal", "Pengadaan", "Penyaluran", "Stok Akhir"]], body: tableData, theme: "grid" });
+    
+    autoTable(doc, { 
+      startY: 65, 
+      head: [["NO", "TANGGAL SO", "NO SO / TGL SALUR", "PENGECER", "KECAMATAN", "Stok Awal", "Pengadaan", "Penyaluran", "Stok Akhir"]], 
+      body: tableData, 
+      theme: "grid",
+      styles: { fontSize: 7 }
+    });
     doc.save(`Rekap_DO_${periode}.pdf`);
   };
 
   const inputClass = "w-full bg-transparent border-none focus:ring-0 px-2 py-1 text-sm font-bold text-slate-800 outline-none";
 
-  // VIEW UPDATE APLIKASI
-  if (view === "update") {
-    return (
-      <div className="min-h-screen bg-slate-200 p-8 flex flex-col items-center">
-        <div className="max-w-[600px] w-full bg-white shadow-2xl rounded-3xl overflow-hidden flex flex-col">
-          <div className="bg-slate-900 px-8 py-5 flex justify-between items-center text-white">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setView("dashboard")} className="hover:bg-white/10 p-2 rounded-xl transition"><ArrowLeft size={24}/></button>
-              <h2 className="font-black text-sm tracking-widest uppercase">Pembaruan Aplikasi</h2>
-            </div>
-          </div>
-          <div className="p-12 flex flex-col items-center text-center space-y-8 bg-slate-50/50">
-            <div className="bg-blue-600 p-6 rounded-full text-white shadow-2xl shadow-blue-200 animate-bounce">
-              <Download size={48} />
-            </div>
-            <div>
-              <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1">Versi Terinstal</p>
-              <h3 className="text-4xl font-black text-slate-900">v{appVersion}</h3>
-            </div>
-            
-            <div className="w-full bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4">
-              {updateStatus === "idle" && <p className="text-sm font-bold text-slate-500">Klik tombol di bawah untuk mengecek versi terbaru.</p>}
-              {updateStatus === "checking" && <div className="flex flex-col items-center gap-3"><RefreshCw className="animate-spin text-blue-600" /><p className="text-sm font-black text-blue-600 animate-pulse">Menghubungkan ke Server...</p></div>}
-              {updateStatus === "latest" && <div className="flex flex-col items-center gap-2"><div className="bg-emerald-100 text-emerald-600 p-2 rounded-full"><CheckCircle2 size={24}/></div><p className="text-sm font-black text-emerald-600">Aplikasi Sudah Versi Terbaru!</p></div>}
-            </div>
-
-            <button 
-              onClick={checkUpdate}
-              disabled={updateStatus === "checking"}
-              className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition disabled:opacity-50"
-            >
-              Cek Pembaruan Sekarang
-            </button>
-          </div>
-          <div className="px-8 py-4 bg-white border-t border-slate-100 flex items-center gap-3 text-slate-400">
-            <Info size={16}/>
-            <p className="text-[10px] font-bold">Terakhir dicek: {new Date().toLocaleDateString('id-ID')}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // TAMPILAN TEMPLATE EDITOR (Sama seperti sebelumnya)
   if (view === "template") {
     return (
       <div className="min-h-screen bg-slate-200 p-8 flex flex-col items-center">
-        <div className="max-w-[1000px] w-full bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col h-[90vh]">
+        <div className="max-w-[1100px] w-full bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col h-[92vh]">
           <div className="bg-slate-900 px-8 py-4 flex justify-between items-center text-white">
             <div className="flex items-center gap-4">
               <button onClick={() => setView("dashboard")} className="hover:bg-white/10 p-2 rounded-xl transition"><ArrowLeft size={24}/></button>
-              <h2 className="font-black text-sm tracking-widest uppercase">Editor Template</h2>
+              <h2 className="font-black text-sm tracking-widest uppercase">Editor Template Laporan</h2>
             </div>
-            <button onClick={async () => { await ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: templateInfo }); setView("dashboard"); }} className="bg-blue-600 hover:bg-blue-700 px-8 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 transition"><Save size={18}/> Simpan</button>
+            <button onClick={async () => { await ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: templateInfo }); setView("dashboard"); }} className="bg-blue-600 hover:bg-blue-700 px-8 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 transition"><Save size={18}/> Simpan Template</button>
           </div>
-          <div className="flex-1 overflow-auto bg-slate-100 p-10 custom-scrollbar">
-            <div className="bg-white mx-auto shadow-sm border border-slate-200 p-16 min-h-[1400px] w-full flex flex-col">
-              <div className="flex justify-end mb-12">
-                <div className="w-[380px] space-y-1.5 p-4 border border-dashed border-blue-200 rounded-xl">
-                  <p className="text-[10px] font-black text-blue-500 uppercase">Tujuan</p>
-                  <input type="text" className="w-full text-right font-black bg-transparent outline-none" value={templateInfo.kepada} onChange={e => setTemplateInfo({...templateInfo, kepada: e.target.value})} />
-                  <input type="text" className="w-full text-right font-black bg-transparent outline-none" value={templateInfo.penerima_1} onChange={e => setTemplateInfo({...templateInfo, penerima_1: e.target.value})} />
-                  <input type="text" className="w-full text-right font-black bg-transparent outline-none" value={templateInfo.penerima_2} onChange={e => setTemplateInfo({...templateInfo, penerima_2: e.target.value})} />
+          <div className="flex-1 overflow-auto bg-slate-100 p-8 custom-scrollbar">
+            <div className="bg-white mx-auto shadow-sm border border-slate-200 p-12 min-h-[1200px] w-full flex flex-col">
+              
+              <div className="flex justify-end mb-10">
+                <div className="w-[420px] space-y-1.5 p-5 border border-dashed border-blue-200 rounded-xl bg-blue-50/20">
+                  <p className="text-[10px] font-black text-blue-500 uppercase mb-3">Tujuan Pengiriman (Header Kanan)</p>
+                  <input type="text" className="w-full text-right font-black bg-transparent outline-none text-sm" value={templateInfo.kepada} onChange={e => setTemplateInfo({...templateInfo, kepada: e.target.value})} placeholder="Kepada Yth" />
+                  <input type="text" className="w-full text-right font-black bg-transparent outline-none text-sm" value={templateInfo.penerima_1} onChange={e => setTemplateInfo({...templateInfo, penerima_1: e.target.value})} placeholder="Manager Penjualan PSO" />
+                  <input type="text" className="w-full text-right font-black bg-transparent outline-none text-sm" value={templateInfo.penerima_2} onChange={e => setTemplateInfo({...templateInfo, penerima_2: e.target.value})} placeholder="PT.PUPUK KUJANG" />
+                  <input type="text" className="w-full text-right font-black bg-transparent outline-none text-sm" value={templateInfo.alamat_penerima_1} onChange={e => setTemplateInfo({...templateInfo, alamat_penerima_1: e.target.value})} placeholder="Jl Jend.A.Yani No.39 Cikampek" />
+                  <input type="text" className="w-full text-right font-black bg-transparent outline-none text-sm" value={templateInfo.alamat_penerima_2} onChange={e => setTemplateInfo({...templateInfo, alamat_penerima_2: e.target.value})} placeholder="Kab Karawang" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-10 mb-10">
-                <div className="space-y-4 p-4 border border-dashed border-emerald-200 rounded-xl text-slate-800">
-                   <p className="text-[10px] font-black text-emerald-600 uppercase">Profil</p>
-                   {[{ label: "Code", key: "code" }, { label: "Nama PT", key: "nama_perusahaan" }, { label: "Kabupaten", key: "kabupaten" }].map(item => (
-                     <div key={item.key} className="flex items-center gap-3">
-                        <span className="w-24 text-[10px] font-black text-slate-400 uppercase">{item.label}</span>
-                        <input type="text" className="flex-1 bg-transparent border-b border-slate-100 font-black text-sm outline-none" value={(templateInfo as any)[item.key]} onChange={e => setTemplateInfo({...templateInfo, [item.key]: e.target.value})} />
+
+              <div className="grid grid-cols-1 gap-4 mb-10">
+                <div className="space-y-4 p-7 border border-dashed border-emerald-200 rounded-xl bg-emerald-50/10 text-slate-800">
+                   <p className="text-[10px] font-black text-emerald-600 uppercase mb-3">Profil Perusahaan & Laporan (Header Kiri)</p>
+                   {[
+                     { label: "Code", key: "code" },
+                     { label: "Provinsi", key: "provinsi" },
+                     { label: "Nama Perusahaan", key: "nama_perusahaan" },
+                     { label: "Alamat", key: "alamat_perusahaan" },
+                     { label: "Telp/Fax", key: "telp" },
+                     { label: "E-mail", key: "email" },
+                     { label: "Kabupaten", key: "kabupaten" },
+                     { label: "Jenis Pupuk", key: "jenis_pupuk" }
+                   ].map(item => (
+                     <div key={item.key} className="flex items-center gap-5">
+                        <span className="w-40 text-[11px] font-black text-slate-400 uppercase tracking-tight">{item.label}</span>
+                        <span className="text-slate-300">:</span>
+                        <input type="text" className="flex-1 bg-transparent border-b border-slate-100 font-bold text-sm outline-none focus:border-emerald-400 transition-colors" value={(templateInfo as any)[item.key]} onChange={e => setTemplateInfo({...templateInfo, [item.key]: e.target.value})} />
                      </div>
                    ))}
                 </div>
               </div>
+
+              <div className="mt-auto grid grid-cols-2 gap-12">
+                <div className="p-5 border border-dashed border-slate-200 rounded-xl">
+                  <p className="text-[10px] font-black text-slate-400 uppercase mb-4">Daftar Tembusan</p>
+                  <div className="space-y-1.5">
+                    {templateInfo.tembusan.map((t, i) => (
+                      <input key={i} type="text" className="w-full text-[11px] font-medium bg-transparent outline-none border-b border-slate-50 focus:border-slate-200 transition-colors" value={t} onChange={e => {
+                        const newT = [...templateInfo.tembusan];
+                        newT[i] = e.target.value;
+                        setTemplateInfo({...templateInfo, tembusan: newT});
+                      }} />
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-5 p-7 border border-dashed border-orange-200 rounded-xl bg-orange-50/10">
+                  <p className="text-[10px] font-black text-orange-600 uppercase mb-3">Otoritas Penanda Tangan</p>
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">Nama Lengkap</label>
+                      <input type="text" className="w-full bg-transparent border-b border-slate-200 font-black text-sm outline-none focus:border-orange-300 transition-colors" value={templateInfo.direktur} onChange={e => setTemplateInfo({...templateInfo, direktur: e.target.value})} />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">Jabatan</label>
+                      <input type="text" className="w-full bg-transparent border-b border-slate-200 font-black text-sm outline-none focus:border-orange-300 transition-colors" value={templateInfo.jabatan} onChange={e => setTemplateInfo({...templateInfo, jabatan: e.target.value})} />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -319,7 +378,6 @@ export default function Home() {
     );
   }
 
-  // TAMPILAN DASHBOARD UTAMA
   return (
     <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8">
       <div className="max-w-[1600px] mx-auto space-y-6">
@@ -328,14 +386,13 @@ export default function Home() {
           <div className="flex items-center gap-5">
             <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-xl shadow-blue-200"><FileSpreadsheet size={32} /></div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Rekapitulasi DO Urea</h1>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Rekapitulasi DO {templateInfo.jenis_pupuk}</h1>
               <div className="flex items-center gap-2 mt-1">
                 {isSyncing ? <span className="text-[10px] text-blue-500 font-black uppercase animate-pulse flex items-center gap-1"><RefreshCw size={12} className="animate-spin"/> Syncing...</span> : <span className="text-[10px] text-emerald-600 font-black uppercase flex items-center gap-1"><CheckCircle2 size={12}/> Database Active</span>}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* Menu Update Baru */}
             <button onClick={() => setView("update")} className="bg-white border border-slate-200 text-slate-500 px-6 py-2.5 rounded-2xl font-black text-sm hover:bg-slate-50 transition flex items-center gap-2">Update v{appVersion}</button>
             <button onClick={() => setView("template")} className="bg-slate-100 px-6 py-2.5 rounded-2xl font-black text-sm text-slate-700 hover:bg-slate-200 transition">Edit Template</button>
             <input type="date" className="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm font-black bg-slate-50 text-slate-900 outline-none" value={periode} onChange={e => setPeriode(e.target.value)} />

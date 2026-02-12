@@ -50,26 +50,24 @@
     "typescript": "^5"
   },
   "build": {
-    "appId": "com.megaagrosanjaya.rekapdo",
-    "productName": "Aplikasi Rekap DO",
-    "directories": {
-      "output": "../Aplikasi Rekap DO"
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "indra220",
-        "repo": "rekap-do-app",
-        "private": true
-      }
-    ],
-    "files": [
-      "out/**/*",
-      "main.js",
-      "package.json"
-    ],
-    "win": {
-      "target": "nsis"
-    }
+   "appId": "com.megaagrosanjaya.rekapdo",
+   "productName": "Aplikasi Rekap DO",
+   "directories": {
+    "output": "../Aplikasi Rekap DO"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "shortcutName": "Aplikasi Rekap DO",
+    "uninstallDisplayName": "Aplikasi Rekap DO"
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "files": [
+    "out/**/*",
+    "main.js",
+    "package.json"
+  ]
   }
 }
