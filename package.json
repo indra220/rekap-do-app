@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "pack": "next build && electron-builder --dir",
-    "dist": "next build && electron-builder",
+    "dist": "next build && dotenv -- electron-builder",
     "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "repository": {
@@ -40,6 +40,7 @@
     "@types/react-dom": "^19",
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
+    "dotenv-cli": "^11.0.0",
     "electron": "^40.3.0",
     "electron-builder": "^26.7.0",
     "electron-rebuild": "^3.2.9",
@@ -50,24 +51,24 @@
     "typescript": "^5"
   },
   "build": {
-   "appId": "com.megaagrosanjaya.rekapdo",
-   "productName": "Aplikasi Rekap DO",
-   "directories": {
-    "output": "../Aplikasi Rekap DO"
-  },
-  "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "shortcutName": "Aplikasi Rekap DO",
-    "uninstallDisplayName": "Aplikasi Rekap DO"
-  },
-  "win": {
-    "target": "nsis"
-  },
-  "files": [
-    "out/**/*",
-    "main.js",
-    "package.json"
-  ]
+    "appId": "com.megaagrosanjaya.rekapdo",
+    "productName": "Aplikasi Rekap DO",
+    "directories": {
+      "output": "../Aplikasi Rekap DO"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Aplikasi Rekap DO",
+      "uninstallDisplayName": "Aplikasi Rekap DO"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "out/**/*",
+      "main.js",
+      "package.json"
+    ]
   }
 }
