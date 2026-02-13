@@ -74,6 +74,19 @@ const createWindow = () => {
     loadDevServer();
   }
 };
+const { autoUpdater } = require('electron-updater');
+
+// Tambahkan konfigurasi ini sebelum memanggil autoUpdater.checkForUpdates()
+autoUpdater.setFeedURL({
+  provider: 'github',
+  owner: 'indra220', // Ganti dengan owner repo Anda
+  repo: 'rekap-do-app', // Ganti dengan nama repo Anda
+  private: true,
+  token: 'ghp_KarakterTokenAndaDisini' // Masukkan token GitHub Anda di sini
+});
+
+// Barulah panggil pengecekan
+autoUpdater.checkForUpdatesAndNotify();
 
 app.on('ready', createWindow);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
