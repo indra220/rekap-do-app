@@ -1,17 +1,15 @@
 name: Build and Release Electron App
 
+# PENGATURAN BARU: Jalan otomatis setiap kali ada push ke branch 'main'
 on:
   push:
     branches:
-      - main # Akan selalu jalan setiap kali push ke branch main
+      - main 
   workflow_dispatch:
 
 jobs:
   release:
-    # Menggunakan server Windows OS gratis dari GitHub untuk membuat file .exe
     runs-on: windows-latest 
-
-    # Memberikan izin kepada bot untuk membuat Release di Repo Anda
     permissions:
       contents: write 
 
@@ -22,13 +20,12 @@ jobs:
       - name: 2. Mempersiapkan Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Menggunakan Node.js versi 20 LTS
+          node-version: 20
 
-      - name: 3. Menginstall Dependencies (NPM Install)
+      - name: 3. Menginstall Dependencies
         run: npm install
 
       - name: 4. Build Aplikasi dan Publish ke GitHub Release
-        # Menyuntikkan token otomatis rahasia milik GitHub Actions
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist -- --publish always
