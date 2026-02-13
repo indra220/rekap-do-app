@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React from "react";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash } from "lucide-react"; // Tambah Plus dan Trash icon
 import { TemplateData } from "@/types";
 
 interface TemplateEditorProps {
@@ -25,6 +25,7 @@ export default function TemplateEditor({ templateInfo, setTemplateInfo, onSave, 
         
         <div className="flex-1 overflow-auto bg-slate-100 p-10 custom-scrollbar">
           <div className="bg-white mx-auto shadow-sm border border-slate-200 p-16 w-full flex flex-col space-y-12">
+            
             {/* Bagian Penerima */}
             <div className="flex justify-end">
               <div className="w-[450px] space-y-2 p-6 bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-2xl">
@@ -58,7 +59,7 @@ export default function TemplateEditor({ templateInfo, setTemplateInfo, onSave, 
                  ))}
               </div>
 
-              {/* Bagian Tanda Tangan */}
+              {/* Bagian Tanda Tangan & Tembusan */}
               <div className="space-y-6">
                 <div className="p-8 bg-orange-50/30 border-2 border-dashed border-orange-200 rounded-2xl">
                   <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-4">Otorisasi (Tanda Tangan)</p>
@@ -74,23 +75,48 @@ export default function TemplateEditor({ templateInfo, setTemplateInfo, onSave, 
                   </div>
                 </div>
 
+                {/* MODIFIKASI: Bagian Tembusan dengan Tombol Tambah & Hapus */}
                 <div className="p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Daftar Tembusan</p>
-                  <div className="space-y-2">
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Daftar Tembusan</p>
+                    
+                    {/* Tombol Tambah Tembusan */}
+                    <button 
+                      onClick={() => setTemplateInfo({ ...templateInfo, tembusan: [...templateInfo.tembusan, ""] })}
+                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 transition"
+                    >
+                      <Plus size={12} /> Tambah
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
                     {templateInfo.tembusan.map((t, i) => (
-                      <div key={i} className="flex gap-2">
-                        <span className="text-xs font-black text-slate-400">{i+1}.</span>
-                        <input type="text" className="flex-1 bg-transparent border-b border-slate-200 text-xs font-bold outline-none" value={t} 
+                      <div key={i} className="flex gap-2 items-center group">
+                        <span className="text-xs font-black text-slate-400 w-4">{i+1}.</span>
+                        <input type="text" className="flex-1 bg-transparent border-b border-slate-200 focus:border-slate-400 text-xs font-bold outline-none py-1" value={t} 
                           onChange={e => {
                             const newTem = [...templateInfo.tembusan];
                             newTem[i] = e.target.value;
                             setTemplateInfo({...templateInfo, tembusan: newTem});
                           }} 
                         />
+                        
+                        {/* Tombol Hapus Tembusan */}
+                        <button 
+                          onClick={() => {
+                            const newTem = templateInfo.tembusan.filter((_, idx) => idx !== i);
+                            setTemplateInfo({...templateInfo, tembusan: newTem});
+                          }}
+                          className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition p-1"
+                          title="Hapus Tembusan"
+                        >
+                          <Trash size={14} />
+                        </button>
                       </div>
                     ))}
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
