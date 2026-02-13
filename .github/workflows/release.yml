@@ -1,12 +1,9 @@
 name: Build and Release Electron App
 
-# Kapan server GitHub harus berjalan?
 on:
-  # Opsi 1: Otomatis berjalan jika Anda membuat Tag Git (v1.0.1, dst)
   push:
-    tags:
-      - 'v*'
-  # Opsi 2: Berjalan secara manual lewat tombol di Web GitHub (Paling mudah)
+    branches:
+      - main # Akan selalu jalan setiap kali push ke branch main
   workflow_dispatch:
 
 jobs:

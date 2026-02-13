@@ -1,6 +1,8 @@
 import { TemplateData } from "@/types";
+import packageJson from "../../package.json"; // Import file package.json
 
-export const APP_VERSION = "1.0.1";
+// Otomatis mengambil versi dari package.json
+export const APP_VERSION = packageJson.version;
 
 export const defaultTemplate: TemplateData = {
   kepada: "Kepada Yth", 
