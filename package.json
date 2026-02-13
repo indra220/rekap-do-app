@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.1",
+  "version": "1.0.1a",
   "private": true,
   "main": "main.js",
   "scripts": {
