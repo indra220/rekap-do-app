@@ -1,0 +1,37 @@
+name: Build and Release Electron App
+
+# Kapan server GitHub harus berjalan?
+on:
+  # Opsi 1: Otomatis berjalan jika Anda membuat Tag Git (v1.0.1, dst)
+  push:
+    tags:
+      - 'v*'
+  # Opsi 2: Berjalan secara manual lewat tombol di Web GitHub (Paling mudah)
+  workflow_dispatch:
+
+jobs:
+  release:
+    # Menggunakan server Windows OS gratis dari GitHub untuk membuat file .exe
+    runs-on: windows-latest 
+
+    # Memberikan izin kepada bot untuk membuat Release di Repo Anda
+    permissions:
+      contents: write 
+
+    steps:
+      - name: 1. Mendownload kode dari Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Mempersiapkan Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # Menggunakan Node.js versi 20 LTS
+
+      - name: 3. Menginstall Dependencies (NPM Install)
+        run: npm install
+
+      - name: 4. Build Aplikasi dan Publish ke GitHub Release
+        # Menyuntikkan token otomatis rahasia milik GitHub Actions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist -- --publish always
