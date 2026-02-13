@@ -3,19 +3,21 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const serve = require('electron-serve');
 const Database = require('better-sqlite3');
+const { autoUpdater } = require('electron-updater');
 
-// 1. Inisialisasi Database di Folder User Data
+let mainWindow; // Variabel global untuk jendela utama
+
+// 1. Inisialisasi Database
 const dbPath = path.join(app.getPath('userData'), 'rekap_do_v2.db');
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
-// Membuat tabel secara otomatis jika belum ada (Auto-Migration)
 db.exec(`
   CREATE TABLE IF NOT EXISTS rekapdotemplate (id TEXT PRIMARY KEY, content TEXT, updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);
   CREATE TABLE IF NOT EXISTS solistdata (id TEXT PRIMARY KEY, content TEXT, updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);
 `);
 
-// Handler untuk mengambil data awal (Single-trip IPC)
+// IPC Handlers untuk Database
 ipcMain.handle('db-get-init', () => {
   try {
     const template = db.prepare("SELECT content FROM rekapdotemplate WHERE id = 'current_session'").get();
@@ -29,7 +31,6 @@ ipcMain.handle('db-get-init', () => {
   }
 });
 
-// Handler universal untuk menyimpan data
 ipcMain.handle('db-save', (event, { table, id, data }) => {
   try {
     const upsert = db.prepare(`
@@ -46,7 +47,7 @@ ipcMain.handle('db-save', (event, { table, id, data }) => {
 const appServe = app.isPackaged ? serve({ directory: path.join(__dirname, 'out') }) : null;
 
 const createWindow = () => {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1400,
     height: 950,
     webPreferences: {
@@ -58,35 +59,55 @@ const createWindow = () => {
     show: false,
   });
 
-  win.once('ready-to-show', () => {
-    win.show();
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
   });
 
   if (app.isPackaged) {
-    appServe(win).then(() => { win.loadURL('app://-'); });
+    appServe(mainWindow).then(() => { mainWindow.loadURL('app://-'); });
   } else {
-    // Menggunakan IP 127.0.0.1 agar startup di VS Code lebih cepat
     const loadDevServer = () => {
-      win.loadURL('http://127.0.0.1:3000').catch(() => {
+      mainWindow.loadURL('http://127.0.0.1:3000').catch(() => {
         setTimeout(loadDevServer, 500);
       });
     };
     loadDevServer();
   }
-};
-const { autoUpdater } = require('electron-updater');
 
-// Tambahkan konfigurasi ini sebelum memanggil autoUpdater.checkForUpdates()
-autoUpdater.setFeedURL({
-  provider: 'github',
-  owner: 'indra220', // Ganti dengan owner repo Anda
-  repo: 'rekap-do-app', // Ganti dengan nama repo Anda
-  private: true,
-  token: 'ghp_KarakterTokenAndaDisini' // Masukkan token GitHub Anda di sini
+  // Konfigurasi Auto Updater
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'indra220',
+    repo: 'rekap-do-app',
+    private: true,
+    token: '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' 
+  });
+
+  autoUpdater.autoDownload = false;
+
+  // Cek update saat aplikasi selesai memuat
+  mainWindow.webContents.once('did-finish-load', () => {
+    autoUpdater.checkForUpdates();
+  });
+};
+
+// Event Auto Updater
+autoUpdater.on('update-available', (info) => {
+  if (mainWindow) mainWindow.webContents.send('update-tersedia', info);
 });
 
-// Barulah panggil pengecekan
-autoUpdater.checkForUpdatesAndNotify();
+autoUpdater.on('update-downloaded', () => {
+  if (mainWindow) mainWindow.webContents.send('update-selesai-didownload');
+});
+
+// IPC untuk aksi Update
+ipcMain.on('mulai-download-update', () => {
+  autoUpdater.downloadUpdate();
+});
+
+ipcMain.on('install-dan-restart', () => {
+  autoUpdater.quitAndInstall();
+});
 
 app.on('ready', createWindow);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
