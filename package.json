@@ -62,6 +62,14 @@
       "shortcutName": "Aplikasi Rekap DO",
       "uninstallDisplayName": "Aplikasi Rekap DO"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "indra220", 
+        "repo": "rekap-do-app",
+        "private": true
+      }
+    ],
     "win": {
       "target": "nsis"
     },
