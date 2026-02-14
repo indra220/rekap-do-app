@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -63,6 +63,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Aplikasi Rekap DO",
       "uninstallDisplayName": "Aplikasi Rekap DO",
+      "perMachine": false,
+      "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true
     },
