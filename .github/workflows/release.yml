@@ -32,12 +32,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          # 1. Buat file config JSON sementara secara dinamis
-          # Ini menghindari masalah quoting/spasi pada CLI
+          # Ambil baris pertama saja untuk menghindari error JSON
+          CLEAN_MSG=$(echo "$COMMIT_MSG" | head -n 1)
+
           cat <<EOF > update-config.json
           {
             "releaseInfo": {
-              "releaseNotes": "Update otomatis dari commit: $COMMIT_MSG"
+              "releaseNotes": "Update: $CLEAN_MSG"
             },
             "publish": {
               "provider": "github",
@@ -46,6 +47,4 @@ jobs:
           }
           EOF
 
-          # 2. Jalankan build dengan merujuk ke file config tersebut
-          # Flag -c sekarang merujuk ke file, bukan string JSON langsung
           npm run dist -- --publish always -c update-config.json
