@@ -27,6 +27,7 @@ jobs:
         run: npm install
 
       - name: 4. Build Aplikasi dan Publish ke GitHub Release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
