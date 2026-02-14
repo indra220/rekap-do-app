@@ -1,6 +1,6 @@
 name: Build and Release Electron App
 
-# PENGATURAN BARU: Jalan otomatis setiap kali ada push ke branch 'main'
+# PENGATURAN: Jalan otomatis setiap kali ada push ke branch 'main'
 on:
   push:
     branches:
@@ -28,4 +28,5 @@ jobs:
       - name: 4. Build Aplikasi dan Publish ke GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist -- --publish always
+        # Menambahkan flag -c.publish.releaseType=release agar tidak menjadi draft
+        run: npm run dist -- --publish always "-c.publish.releaseType=release"

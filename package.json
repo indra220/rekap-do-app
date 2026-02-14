@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -67,6 +67,7 @@
         "provider": "github",
         "owner": "indra220", 
         "repo": "rekap-do-app",
+        "releaseType": "release",
         "private": true
       }
     ],
