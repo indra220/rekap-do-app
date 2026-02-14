@@ -11,6 +11,7 @@ import { defaultTemplate, APP_VERSION } from "@/constants/data";
 import TemplateEditor from "@/components/TemplateEditor";
 import UpdateView from "@/components/UpdateView";
 
+
 // Akses IPC Renderer secara aman (hanya di sisi client/Electron)
 let ipcRenderer: any = null;
 if (typeof window !== "undefined" && (window as any).require) {
@@ -18,9 +19,6 @@ if (typeof window !== "undefined" && (window as any).require) {
 }
 
 export default function Home() {
-  // ==========================================
-  // 1. SEMUA HOOKS (Didefinisikan di Paling Atas)
-  // ==========================================
   const [view, setView] = useState<"dashboard" | "template" | "update">("dashboard");
   const [isSyncing, setIsSyncing] = useState(true);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -33,23 +31,12 @@ export default function Home() {
   const [hasUpdateNotification, setHasUpdateNotification] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [statusDownload, setStatusDownload] = useState<"standby" | "downloading" | "ready">("standby");
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const focusTargetIdRef = useRef<string | null>(null);
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // Effect: Tutup Menu Export saat Klik di Luar
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
-        setIsExportMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Effect: Background Update Listener
   useEffect(() => {
     if (!ipcRenderer) return;
 
@@ -58,18 +45,39 @@ export default function Home() {
       setHasUpdateNotification(true);
     };
 
+    const handleDownloadProgress = (_event: any, progressObj: any) => {
+      setStatusDownload("downloading");
+      setDownloadProgress(Math.floor(progressObj.percent));
+    };
+
     const handleUpdateDownloaded = () => {
       setStatusDownload("ready");
+      setDownloadProgress(100);
+    };
+
+    const handleUpdateError = (_event: any, errorMsg: string) => {
+      alert("Gagal mengunduh pembaruan: " + errorMsg);
+      setStatusDownload("standby");
+      setDownloadProgress(0);
     };
 
     ipcRenderer.on('update-tersedia', handleUpdateAvailable);
+    ipcRenderer.on('update-download-progress', handleDownloadProgress);
     ipcRenderer.on('update-selesai-didownload', handleUpdateDownloaded);
+    ipcRenderer.on('update-error', handleUpdateError);
 
     return () => {
       ipcRenderer.removeListener('update-tersedia', handleUpdateAvailable);
+      ipcRenderer.removeListener('update-download-progress', handleDownloadProgress);
       ipcRenderer.removeListener('update-selesai-didownload', handleUpdateDownloaded);
+      ipcRenderer.removeListener('update-error', handleUpdateError);
     };
   }, []);
+
+  const triggerDownload = () => {
+    setStatusDownload("downloading");
+    if (ipcRenderer) ipcRenderer.send('mulai-download-update');
+  };
 
   // Effect: Ambil Data Awal dari SQLite
   useEffect(() => {
@@ -181,7 +189,15 @@ export default function Home() {
   }
 
   if (view === "update") {
-    return <UpdateView infoUpdate={updateInfo} statusDownload={statusDownload} onBack={() => setView("dashboard")} />;
+    return (
+      <UpdateView 
+        infoUpdate={updateInfo} 
+        statusDownload={statusDownload} 
+        progress={downloadProgress}
+        onStartDownload={triggerDownload}
+        onBack={() => setView("dashboard")} 
+      />
+    );
   }
 
   const inputClass = "w-full bg-transparent border-none focus:ring-0 px-2 py-1 text-sm font-bold text-slate-800 outline-none";
@@ -189,7 +205,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8">
       <div className="max-w-[1600px] mx-auto space-y-6">
-        {/* Header */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex justify-between items-center relative">
           <div className="absolute top-0 left-0 w-2 h-full bg-blue-600 rounded-l-3xl"></div>
           <div className="flex items-center gap-5">
@@ -216,15 +231,8 @@ export default function Home() {
             </button>
             <button onClick={() => setView("template")} className="bg-slate-100 px-6 py-2.5 rounded-2xl font-black text-sm text-slate-700 hover:bg-slate-200 transition">Edit Template</button>
             <input type="date" className="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm font-black bg-slate-50 text-slate-900 outline-none" value={periode} onChange={e => setPeriode(e.target.value)} />
-            
-            <div className="relative" ref={exportMenuRef}>
+            <div className="relative">
               <button onClick={() => setIsExportMenuOpen(!isExportMenuOpen)} className="bg-blue-600 text-white px-10 py-3 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-200 uppercase text-xs tracking-widest flex items-center gap-3 border-2 border-blue-500">Export <ChevronDown size={20}/></button>
-              {isExportMenuOpen && (
-                <div className="absolute right-0 mt-4 w-64 bg-white shadow-2xl rounded-3xl border border-slate-100 py-3 z-[9999]">
-                  <button onClick={() => { setIsExportMenuOpen(false); exportToExcel(soList, templateInfo, periode); }} className="w-full text-left px-5 py-4 text-[13px] font-black text-slate-700 hover:bg-blue-50 flex items-center gap-4"><FileSpreadsheet size={20} className="text-emerald-500"/><span>Excel Document (.xlsx)</span></button>
-                  <button onClick={() => { setIsExportMenuOpen(false); exportToPDF(soList, templateInfo, periode); }} className="w-full text-left px-5 py-4 text-[13px] font-black text-slate-700 hover:bg-red-50 flex items-center gap-4"><FileText size={20} className="text-red-500"/><span>PDF Document (.pdf)</span></button>
-                </div>
-              )}
             </div>
           </div>
         </div>

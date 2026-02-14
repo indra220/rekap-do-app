@@ -5,7 +5,7 @@ const serve = require('electron-serve');
 const Database = require('better-sqlite3');
 const { autoUpdater } = require('electron-updater');
 
-let mainWindow; // Variabel global untuk jendela utama
+let mainWindow;
 
 // 1. Inisialisasi Database
 const dbPath = path.join(app.getPath('userData'), 'rekap_do_v2.db');
@@ -17,7 +17,6 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS solistdata (id TEXT PRIMARY KEY, content TEXT, updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);
 `);
 
-// IPC Handlers untuk Database
 ipcMain.handle('db-get-init', () => {
   try {
     const template = db.prepare("SELECT content FROM rekapdotemplate WHERE id = 'current_session'").get();
@@ -80,29 +79,41 @@ const createWindow = () => {
     owner: 'indra220',
     repo: 'rekap-do-app',
     private: true,
-    token: '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' 
+    token: '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' // PASTIKAN TOKEN INI VALID
   });
 
   autoUpdater.autoDownload = false;
 
-  // Cek update saat aplikasi selesai memuat
   mainWindow.webContents.once('did-finish-load', () => {
     autoUpdater.checkForUpdates();
   });
 };
 
-// Event Auto Updater
+// --- EVENT AUTO UPDATER ---
+
 autoUpdater.on('update-available', (info) => {
   if (mainWindow) mainWindow.webContents.send('update-tersedia', info);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  // Mengirim objek progres yang berisi persen download
+  if (mainWindow) mainWindow.webContents.send('update-download-progress', progressObj);
 });
 
 autoUpdater.on('update-downloaded', () => {
   if (mainWindow) mainWindow.webContents.send('update-selesai-didownload');
 });
 
+autoUpdater.on('error', (err) => {
+  console.error("AutoUpdater Error:", err);
+  if (mainWindow) mainWindow.webContents.send('update-error', err.message);
+});
+
 // IPC untuk aksi Update
 ipcMain.on('mulai-download-update', () => {
-  autoUpdater.downloadUpdate();
+  autoUpdater.downloadUpdate().catch(err => {
+    if (mainWindow) mainWindow.webContents.send('update-error', err.message);
+  });
 });
 
 ipcMain.on('install-dan-restart', () => {
