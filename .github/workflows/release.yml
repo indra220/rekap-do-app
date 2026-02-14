@@ -30,15 +30,16 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          FULL_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          # Ambil baris pertama saja untuk menghindari error JSON
-          CLEAN_MSG=$(echo "$COMMIT_MSG" | head -n 1)
+          # Mengonversi seluruh pesan commit menjadi string JSON yang aman (mengubah newline ke \n)
+          # Kita gunakan python untuk memastikan semua karakter spesial tertangani dengan benar
+          SAFE_MSG=$(echo "$FULL_COMMIT_MSG" | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()).strip('\"'))")
 
           cat <<EOF > update-config.json
           {
             "releaseInfo": {
-              "releaseNotes": "Update: $CLEAN_MSG"
+              "releaseNotes": "$SAFE_MSG"
             },
             "publish": {
               "provider": "github",
