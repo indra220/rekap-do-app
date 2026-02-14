@@ -20,17 +20,14 @@ jobs:
       - name: 2. Mempersiapkan Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: 3. Menginstall Dependencies
         run: npm install
 
-      - name: Build Next.js (Export)
-        run: npm run build
-
       - name: 4. Build Aplikasi dan Publish ke GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-         npm run dist -- --publish always -c.releaseInfo.releaseNotes="Update otomatis dari commit: $COMMIT_MSG" -c.publish.releaseType=release
+         npm run dist -- --publish always -c "{\"releaseInfo\":{\"releaseNotes\":\"Update otomatis dari commit: $COMMIT_MSG\"},\"publish\":{\"releaseType\":\"release\"}}"
