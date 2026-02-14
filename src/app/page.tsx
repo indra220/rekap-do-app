@@ -28,10 +28,11 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // State untuk Fitur Update
-  const [hasUpdateNotification, setHasUpdateNotification] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [statusDownload, setStatusDownload] = useState<"standby" | "downloading" | "ready">("standby");
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [hasUpdateNotification, setHasUpdateNotification] = useState(false);
 
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const focusTargetIdRef = useRef<string | null>(null);
@@ -40,10 +41,20 @@ export default function Home() {
   useEffect(() => {
     if (!ipcRenderer) return;
 
+    const handleUpdateChecking = () => setIsChecking(true);
+
     const handleUpdateAvailable = (_event: any, info: any) => {
       setUpdateInfo(info);
       setHasUpdateNotification(true);
+      setIsChecking(false);
     };
+
+    const handleUpdateNotAvailable = () => {
+      setUpdateInfo(null);
+      setIsChecking(false);
+      setHasUpdateNotification(false);
+    };
+
 
     const handleDownloadProgress = (_event: any, progressObj: any) => {
       setStatusDownload("downloading");
@@ -61,18 +72,24 @@ export default function Home() {
       setDownloadProgress(0);
     };
 
+    ipcRenderer.on('update-sedang-dicek', handleUpdateChecking);
     ipcRenderer.on('update-tersedia', handleUpdateAvailable);
+    ipcRenderer.on('update-tidak-ada', handleUpdateNotAvailable);
     ipcRenderer.on('update-download-progress', handleDownloadProgress);
     ipcRenderer.on('update-selesai-didownload', handleUpdateDownloaded);
     ipcRenderer.on('update-error', handleUpdateError);
 
     return () => {
-      ipcRenderer.removeListener('update-tersedia', handleUpdateAvailable);
-      ipcRenderer.removeListener('update-download-progress', handleDownloadProgress);
-      ipcRenderer.removeListener('update-selesai-didownload', handleUpdateDownloaded);
-      ipcRenderer.removeListener('update-error', handleUpdateError);
+      ipcRenderer.removeAllListeners('update-sedang-dicek');
+      ipcRenderer.removeAllListeners('update-tersedia');
+      ipcRenderer.removeAllListeners('update-tidak-ada');
+      ipcRenderer.removeAllListeners('update-download-progress');
+      ipcRenderer.removeAllListeners('update-selesai-didownload');
+      ipcRenderer.removeAllListeners('update-error');
     };
   }, []);
+
+  
 
   const triggerDownload = () => {
     setStatusDownload("downloading");
@@ -185,13 +202,14 @@ export default function Home() {
   
   // RETURN KONDISIONAL HARUS DI BAWAH SEMUA HOOKS!
   if (view === "template") {
-    return <TemplateEditor templateInfo={templateInfo} setTemplateInfo={setTemplateInfo} onSave={saveTemplate} onBack={() => setView("dashboard")} />;
+    return <TemplateEditor templateInfo={templateInfo} setTemplateInfo={setTemplateInfo} onSave={() => setView("dashboard")} onBack={() => setView("dashboard")} />;
   }
 
   if (view === "update") {
     return (
       <UpdateView 
         infoUpdate={updateInfo} 
+        isChecking={isChecking}
         statusDownload={statusDownload} 
         progress={downloadProgress}
         onStartDownload={triggerDownload}

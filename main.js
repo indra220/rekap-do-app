@@ -95,10 +95,20 @@ autoUpdater.on('update-available', (info) => {
   if (mainWindow) mainWindow.webContents.send('update-tersedia', info);
 });
 
+autoUpdater.on('checking-for-update', () => {
+  if (mainWindow) mainWindow.webContents.send('update-sedang-dicek');
+});
+
 autoUpdater.on('download-progress', (progressObj) => {
   // Mengirim objek progres yang berisi persen download
   if (mainWindow) mainWindow.webContents.send('update-download-progress', progressObj);
 });
+
+autoUpdater.on('update-not-available', () => {
+  // Sinyal penting agar UI tahu pengecekan selesai dan tidak ada update
+  if (mainWindow) mainWindow.webContents.send('update-tidak-ada');
+});
+
 
 autoUpdater.on('update-downloaded', () => {
   if (mainWindow) mainWindow.webContents.send('update-selesai-didownload');
@@ -115,6 +125,11 @@ ipcMain.on('mulai-download-update', () => {
     if (mainWindow) mainWindow.webContents.send('update-error', err.message);
   });
 });
+
+ipcMain.on('cek-update-otomatis', () => {
+  autoUpdater.checkForUpdates();
+});
+
 
 ipcMain.on('install-dan-restart', () => {
   autoUpdater.quitAndInstall(true, true);
