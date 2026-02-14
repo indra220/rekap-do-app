@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -59,8 +59,12 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
       "shortcutName": "Aplikasi Rekap DO",
-      "uninstallDisplayName": "Aplikasi Rekap DO"
+      "uninstallDisplayName": "Aplikasi Rekap DO",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
     },
     "publish": [
       {

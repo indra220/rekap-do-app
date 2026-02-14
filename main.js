@@ -117,7 +117,7 @@ ipcMain.on('mulai-download-update', () => {
 });
 
 ipcMain.on('install-dan-restart', () => {
-  autoUpdater.quitAndInstall();
+  autoUpdater.quitAndInstall(true, true);
 });
 
 app.on('ready', createWindow);
