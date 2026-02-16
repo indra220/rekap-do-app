@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -10,7 +10,8 @@
     "lint": "next lint",
     "pack": "next build && electron-builder --dir",
     "dist": "next build && dotenv -- electron-builder",
-    "rebuild": "electron-rebuild -f -w better-sqlite3"
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-builder install-app-deps"
   },
   "repository": {
     "type": "git",
@@ -70,7 +71,6 @@
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
-      "compressor": "zstandard",
       "unicode": true
     },
     "publish": [
