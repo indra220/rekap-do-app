@@ -12,9 +12,17 @@ const dbPath = path.join(app.getPath('userData'), 'rekap_do_v2.db');
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
+// PERBAIKAN: Menambahkan pembuatan tabel rekap_do beserta PRIMARY KEY
 db.exec(`
   CREATE TABLE IF NOT EXISTS rekapdotemplate (id TEXT PRIMARY KEY, content TEXT, updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);
   CREATE TABLE IF NOT EXISTS solistdata (id TEXT PRIMARY KEY, content TEXT, updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);
+  CREATE TABLE IF NOT EXISTS rekap_do (
+    no_do TEXT PRIMARY KEY, 
+    customer TEXT, 
+    tanggal TEXT, 
+    item TEXT, 
+    jumlah REAL
+  );
 `);
 
 ipcMain.handle('db-get-init', () => {
@@ -27,6 +35,34 @@ ipcMain.handle('db-get-init', () => {
     };
   } catch (e) {
     return { template: null, solist: null };
+  }
+});
+
+ipcMain.handle('save-imported-data', async (event, data) => {
+  // PERBAIKAN: Menggunakan try-catch agar aplikasi tidak crash jika format data rusak
+  try {
+    const insert = db.prepare(`
+      INSERT INTO rekap_do (no_do, customer, tanggal, item, jumlah) 
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(no_do) DO UPDATE SET 
+        customer=excluded.customer, 
+        tanggal=excluded.tanggal, 
+        item=excluded.item, 
+        jumlah=excluded.jumlah
+    `);
+
+    // Gunakan transaction untuk kecepatan (sangat penting jika data ribuan)
+    const insertMany = db.transaction((rows) => {
+      for (const row of rows) {
+        insert.run(row.no_do, row.customer, row.tanggal, row.item, row.jumlah);
+      }
+    });
+
+    insertMany(data);
+    return { success: true };
+  } catch (error) {
+    console.error("Gagal menyimpan data import ke SQLite:", error);
+    return { success: false, error: error.message };
   }
 });
 
@@ -109,7 +145,6 @@ autoUpdater.on('update-not-available', () => {
   if (mainWindow) mainWindow.webContents.send('update-tidak-ada');
 });
 
-
 autoUpdater.on('update-downloaded', () => {
   if (mainWindow) mainWindow.webContents.send('update-selesai-didownload');
 });
@@ -129,7 +164,6 @@ ipcMain.on('mulai-download-update', () => {
 ipcMain.on('cek-update-otomatis', () => {
   autoUpdater.checkForUpdates();
 });
-
 
 ipcMain.on('install-dan-restart', () => {
   autoUpdater.quitAndInstall(true, true);

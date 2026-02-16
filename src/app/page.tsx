@@ -2,17 +2,26 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, FileSpreadsheet, CornerDownRight, Box, RefreshCw, CheckCircle2, X, ChevronDown, FileText, CheckSquare, Square } from "lucide-react";
+import { Plus, Trash2, FileSpreadsheet, CornerDownRight, Box, RefreshCw, CheckCircle2, X, ChevronDown, CheckSquare, Square, Upload } from "lucide-react";
 
 import { PenyaluranData, SOData, TemplateData } from "@/types";
 import { generateId, formatDesimal } from "@/utils/helpers";
-import { exportToExcel, exportToPDF } from "@/utils/exporter";
 import { defaultTemplate, APP_VERSION } from "@/constants/data";
 import TemplateEditor from "@/components/TemplateEditor";
 import UpdateView from "@/components/UpdateView";
+import ImportExcel from "@/components/ImportExcel"; // Import Komponen Baru
 
+declare global {
+  interface Window {
+    ipcRenderer: {
+      invoke: (channel: string, ...args: any[]) => Promise<any>;
+      send: (channel: string, ...args: any[]) => void;
+      on: (channel: string, listener: (...args: any[]) => void) => void;
+      removeListener: (channel: string, listener: (...args: any[]) => void) => void;
+    };
+  }
+}
 
-// Akses IPC Renderer secara aman (hanya di sisi client/Electron)
 let ipcRenderer: any = null;
 if (typeof window !== "undefined" && (window as any).require) {
   ipcRenderer = (window as any).require("electron").ipcRenderer;
@@ -22,55 +31,30 @@ export default function Home() {
   const [view, setView] = useState<"dashboard" | "template" | "update">("dashboard");
   const [isSyncing, setIsSyncing] = useState(true);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false); // State Modal Import
   const [periode, setPeriode] = useState(new Date().toISOString().slice(0, 10));
   const [templateInfo, setTemplateInfo] = useState<TemplateData>(defaultTemplate);
   const [soList, setSoList] = useState<SOData[]>([{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // State untuk Fitur Update
+  // State Fitur Update
   const [isChecking, setIsChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [statusDownload, setStatusDownload] = useState<"standby" | "downloading" | "ready">("standby");
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [hasUpdateNotification, setHasUpdateNotification] = useState(false);
 
-  const exportMenuRef = useRef<HTMLDivElement>(null);
   const focusTargetIdRef = useRef<string | null>(null);
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   useEffect(() => {
     if (!ipcRenderer) return;
-
     const handleUpdateChecking = () => setIsChecking(true);
-
-    const handleUpdateAvailable = (_event: any, info: any) => {
-      setUpdateInfo(info);
-      setHasUpdateNotification(true);
-      setIsChecking(false);
-    };
-
-    const handleUpdateNotAvailable = () => {
-      setUpdateInfo(null);
-      setIsChecking(false);
-      setHasUpdateNotification(false);
-    };
-
-
-    const handleDownloadProgress = (_event: any, progressObj: any) => {
-      setStatusDownload("downloading");
-      setDownloadProgress(Math.floor(progressObj.percent));
-    };
-
-    const handleUpdateDownloaded = () => {
-      setStatusDownload("ready");
-      setDownloadProgress(100);
-    };
-
-    const handleUpdateError = (_event: any, errorMsg: string) => {
-      alert("Gagal mengunduh pembaruan: " + errorMsg);
-      setStatusDownload("standby");
-      setDownloadProgress(0);
-    };
+    const handleUpdateAvailable = (_event: any, info: any) => { setUpdateInfo(info); setHasUpdateNotification(true); setIsChecking(false); };
+    const handleUpdateNotAvailable = () => { setUpdateInfo(null); setIsChecking(false); setHasUpdateNotification(false); };
+    const handleDownloadProgress = (_event: any, progressObj: any) => { setStatusDownload("downloading"); setDownloadProgress(Math.floor(progressObj.percent)); };
+    const handleUpdateDownloaded = () => { setStatusDownload("ready"); setDownloadProgress(100); };
+    const handleUpdateError = (_event: any, errorMsg: string) => { alert("Gagal update: " + errorMsg); setStatusDownload("standby"); };
 
     ipcRenderer.on('update-sedang-dicek', handleUpdateChecking);
     ipcRenderer.on('update-tersedia', handleUpdateAvailable);
@@ -78,7 +62,6 @@ export default function Home() {
     ipcRenderer.on('update-download-progress', handleDownloadProgress);
     ipcRenderer.on('update-selesai-didownload', handleUpdateDownloaded);
     ipcRenderer.on('update-error', handleUpdateError);
-
     return () => {
       ipcRenderer.removeAllListeners('update-sedang-dicek');
       ipcRenderer.removeAllListeners('update-tersedia');
@@ -89,14 +72,6 @@ export default function Home() {
     };
   }, []);
 
-  
-
-  const triggerDownload = () => {
-    setStatusDownload("downloading");
-    if (ipcRenderer) ipcRenderer.send('mulai-download-update');
-  };
-
-  // Effect: Ambil Data Awal dari SQLite
   useEffect(() => {
     if (!ipcRenderer) { setIsSyncing(false); return; }
     (async () => {
@@ -104,23 +79,17 @@ export default function Home() {
         const { template, solist } = await ipcRenderer.invoke('db-get-init');
         if (template) setTemplateInfo(template);
         if (solist && solist.length > 0) setSoList(solist);
-      } catch (err) {
-        console.error("Gagal inisialisasi database:", err);
-      } finally { setIsSyncing(false); }
+      } catch (err) { console.error(err); } finally { setIsSyncing(false); }
     })();
   }, []);
 
-  // Effect: Auto-Save Data ke SQLite (Debounced)
   useEffect(() => {
     if (!isSyncing && ipcRenderer && view === "dashboard") {
-      const timer = setTimeout(() => {
-        ipcRenderer.invoke('db-save', { table: 'solistdata', id: 'current_session', data: soList });
-      }, 500);
+      const timer = setTimeout(() => { ipcRenderer.invoke('db-save', { table: 'solistdata', id: 'current_session', data: soList }); }, 500);
       return () => clearTimeout(timer);
     }
   }, [soList, isSyncing, view]);
 
-  // Effect: Manajemen Fokus Input Otomatis
   useEffect(() => {
     if (focusTargetIdRef.current && inputRefs.current[focusTargetIdRef.current]) {
       inputRefs.current[focusTargetIdRef.current]?.focus();
@@ -128,100 +97,40 @@ export default function Home() {
     }
   }, [soList]);
 
-  // ==========================================
-  // 2. FUNGSI LOGIKA (Handlers)
-  // ==========================================
-  const openUpdatePage = () => {
-    setHasUpdateNotification(false);
-    setView("update");
+  // Handler jika Import Selesai
+  const handleDataImported = (importedData: SOData[]) => {
+    // Menghapus baris kosong default lalu menggabungkan dengan data Excel
+    setSoList(prev => [...prev.filter(p => p.noSO !== ""), ...importedData]);
   };
 
-  const saveTemplate = async () => {
-    if (ipcRenderer) {
-      await ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: templateInfo });
-    }
-    setView("dashboard");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent, soId: string) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addPenyaluran(soId);
-    }
-  };
-
-  const addSO = () => {
-    const newId = generateId();
-    setSoList([...soList, { id: newId, tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]);
-    focusTargetIdRef.current = newId; 
-  };
-
-  const addPenyaluran = (soId: string) => {
-    const newId = generateId();
-    setSoList(soList.map(so => so.id === soId ? {...so, penyaluranList: [...so.penyaluranList, {id: newId, tglSalur: "", pengecer: "", penyaluran: 0}]} : so));
-    focusTargetIdRef.current = newId;
-  };
-
+  const openUpdatePage = () => { setHasUpdateNotification(false); setView("update"); };
+  const triggerDownload = () => { setStatusDownload("downloading"); if (ipcRenderer) ipcRenderer.send('mulai-download-update'); };
+  const handleKeyDown = (e: React.KeyboardEvent, soId: string) => { if (e.key === "Enter") { e.preventDefault(); addPenyaluran(soId); } };
+  const addSO = () => { const newId = generateId(); setSoList([...soList, { id: newId, tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]); focusTargetIdRef.current = newId; };
+  const addPenyaluran = (soId: string) => { const newId = generateId(); setSoList(soList.map(so => so.id === soId ? {...so, penyaluranList: [...so.penyaluranList, {id: newId, tglSalur: "", pengecer: "", penyaluran: 0}]} : so)); focusTargetIdRef.current = newId; };
   const removeSO = (id: string) => soList.length > 1 && setSoList(soList.filter(s => s.id !== id));
-  
-  const removePenyaluran = (soId: string, salurId: string) => 
-    setSoList(soList.map(so => so.id === soId ? {...so, penyaluranList: so.penyaluranList.filter(s => s.id !== salurId)} : so));
+  const removePenyaluran = (soId: string, salurId: string) => setSoList(soList.map(so => so.id === soId ? {...so, penyaluranList: so.penyaluranList.filter(s => s.id !== salurId)} : so));
+  const updateSO = (id: string, field: keyof SOData, value: string | number) => setSoList(soList.map(so => so.id === id ? { ...so, [field]: value } : so));
+  const updatePenyaluran = (soId: string, salurId: string, field: keyof PenyaluranData, value: string | number) => setSoList(soList.map(so => so.id === soId ? {...so, penyaluranList: so.penyaluranList.map(s => s.id === salurId ? {...s, [field]: value} : s)} : so));
+  const toggleSelectAll = () => { const allIds: string[] = []; soList.forEach(so => { allIds.push(so.id); so.penyaluranList.forEach(p => allIds.push(p.id)); }); setSelectedIds(selectedIds.length === allIds.length ? [] : allIds); };
+  const toggleSelect = (id: string) => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const deleteSelected = () => { if (confirm(`Hapus ${selectedIds.length} item?`)) { setSoList(prev => { const f = prev.filter(so => !selectedIds.includes(so.id)); const u = f.map(so => ({ ...so, penyaluranList: so.penyaluranList.filter(p => !selectedIds.includes(p.id)) })); return u.length > 0 ? u : [{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]; }); setSelectedIds([]); }};
 
-  const updateSO = (id: string, field: keyof SOData, value: string | number) => 
-    setSoList(soList.map(so => so.id === id ? { ...so, [field]: value } : so));
-
-  const updatePenyaluran = (soId: string, salurId: string, field: keyof PenyaluranData, value: string | number) => 
-    setSoList(soList.map(so => so.id === soId ? {...so, penyaluranList: so.penyaluranList.map(s => s.id === salurId ? {...s, [field]: value} : s)} : so));
-
-  const toggleSelectAll = () => {
-    const allIds: string[] = [];
-    soList.forEach(so => {
-      allIds.push(so.id);
-      so.penyaluranList.forEach(p => allIds.push(p.id));
-    });
-    setSelectedIds(selectedIds.length === allIds.length ? [] : allIds);
-  };
-
-  const toggleSelect = (id: string) => 
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-
-  const deleteSelected = () => {
-    if (confirm(`Hapus ${selectedIds.length} baris data yang dipilih?`)) {
-      setSoList(prev => {
-        const filteredSOs = prev.filter(so => !selectedIds.includes(so.id));
-        const updatedSOs = filteredSOs.map(so => ({ ...so, penyaluranList: so.penyaluranList.filter(p => !selectedIds.includes(p.id)) }));
-        return updatedSOs.length > 0 ? updatedSOs : [{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }];
-      });
-      setSelectedIds([]);
-    }
-  };
-
-  // ==========================================
-  // 3. RENDER LOGIC (View Switching)
-  // ==========================================
-  
-  // RETURN KONDISIONAL HARUS DI BAWAH SEMUA HOOKS!
-  if (view === "template") {
-    return <TemplateEditor templateInfo={templateInfo} setTemplateInfo={setTemplateInfo} onSave={() => setView("dashboard")} onBack={() => setView("dashboard")} />;
-  }
-
-  if (view === "update") {
-    return (
-      <UpdateView 
-        infoUpdate={updateInfo} 
-        isChecking={isChecking}
-        statusDownload={statusDownload} 
-        progress={downloadProgress}
-        onStartDownload={triggerDownload}
-        onBack={() => setView("dashboard")} 
-      />
-    );
-  }
+  if (view === "template") return <TemplateEditor templateInfo={templateInfo} setTemplateInfo={setTemplateInfo} onSave={() => setView("dashboard")} onBack={() => setView("dashboard")} />;
+  if (view === "update") return <UpdateView infoUpdate={updateInfo} isChecking={isChecking} statusDownload={statusDownload} progress={downloadProgress} onStartDownload={triggerDownload} onBack={() => setView("dashboard")} />;
 
   const inputClass = "w-full bg-transparent border-none focus:ring-0 px-2 py-1 text-sm font-bold text-slate-800 outline-none";
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8">
+      {/* Panggil Modal Import Excel */}
+      {isImportModalOpen && (
+        <ImportExcel 
+          onDataLoaded={handleDataImported} 
+          onClose={() => setIsImportModalOpen(false)} 
+        />
+      )}
+
       <div className="max-w-[1600px] mx-auto space-y-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex justify-between items-center relative">
           <div className="absolute top-0 left-0 w-2 h-full bg-blue-600 rounded-l-3xl"></div>
@@ -238,24 +147,27 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={openUpdatePage} 
-              className={`relative bg-white border ${hasUpdateNotification ? 'border-orange-500 text-orange-600' : 'border-slate-200 text-slate-500'} px-6 py-2.5 rounded-2xl font-black text-sm hover:bg-slate-50 transition flex items-center gap-2`}
-            >
+            <button onClick={openUpdatePage} className={`relative bg-white border ${hasUpdateNotification ? 'border-orange-500 text-orange-600' : 'border-slate-200 text-slate-500'} px-6 py-2.5 rounded-2xl font-black text-sm hover:bg-slate-50 transition flex items-center gap-2`}>
               Update v{APP_VERSION}
-              {hasUpdateNotification && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] text-white animate-bounce border-2 border-white font-black">!</span>
-              )}
+              {hasUpdateNotification && <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] text-white animate-bounce border-2 border-white font-black">!</span>}
             </button>
             <button onClick={() => setView("template")} className="bg-slate-100 px-6 py-2.5 rounded-2xl font-black text-sm text-slate-700 hover:bg-slate-200 transition">Edit Template</button>
             <input type="date" className="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm font-black bg-slate-50 text-slate-900 outline-none" value={periode} onChange={e => setPeriode(e.target.value)} />
-            <div className="relative">
-              <button onClick={() => setIsExportMenuOpen(!isExportMenuOpen)} className="bg-blue-600 text-white px-10 py-3 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-200 uppercase text-xs tracking-widest flex items-center gap-3 border-2 border-blue-500">Export <ChevronDown size={20}/></button>
+            
+            <div className="relative flex gap-2">
+              <button 
+                onClick={() => setIsImportModalOpen(true)} 
+                className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-200 uppercase text-xs tracking-widest flex items-center gap-2 border-2 border-emerald-500"
+              >
+                <Upload size={16}/> Import
+              </button>
+              <button onClick={() => setIsExportMenuOpen(!isExportMenuOpen)} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-200 uppercase text-xs tracking-widest flex items-center gap-3 border-2 border-blue-500">
+                Export <ChevronDown size={20}/>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Main Content / Table */}
         <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-220px)] relative">
           <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white z-20">
             <div className="flex items-center gap-4">
@@ -267,8 +179,9 @@ export default function Home() {
             <button onClick={addSO} className="bg-slate-900 text-white px-8 py-2.5 rounded-xl flex items-center gap-2 text-sm font-black hover:bg-slate-800 transition shadow-lg"><Plus size={20}/> Tambah DO Baru</button>
           </div>
 
+          {/* Area Tabel dengan Scrollbar Horizontal */}
           <div className="overflow-auto flex-1 custom-scrollbar pb-36">
-            <table className="w-full text-sm text-left border-collapse table-fixed">
+            <table className="w-full min-w-[1500px] text-sm text-left border-collapse table-fixed">
               <thead className="text-[11px] text-slate-900 uppercase bg-slate-50 sticky top-0 z-30 border-b border-slate-300 font-black">
                 <tr>
                   <th className="w-12 text-center border-r border-slate-300"><button onClick={toggleSelectAll} className="p-1.5">{selectedIds.length > 0 && selectedIds.length === (soList.length + soList.reduce((a,b)=>a+b.penyaluranList.length, 0)) ? <CheckSquare size={18}/> : <Square size={18}/>}</button></th>
