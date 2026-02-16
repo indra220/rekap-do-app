@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -51,6 +51,10 @@
     "typescript": "^5"
   },
   "build": {
+    "asar": true, 
+    "asarUnpack": [
+    "**/node_modules/better-sqlite3/**/*"
+    ],
     "appId": "com.megaagrosanjaya.rekapdo",
     "productName": "Aplikasi Rekap DO",
     "directories": {
@@ -62,10 +66,12 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Aplikasi Rekap DO",
-      "uninstallDisplayName": "Aplikasi Rekap DO",
+      "uninstallDisplayName": "Uninstall Aplikasi Rekap DO",
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "compressor": "zstandard",
+      "unicode": true
     },
     "publish": [
       {

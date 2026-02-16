@@ -23,6 +23,21 @@ export default function UpdateView({
   
   const [isApplying, setIsApplying] = useState(false);
 
+  const renderReleaseNotes = () => {
+  if (!infoUpdate?.releaseNotes) {
+    return <p className="text-slate-500 italic">Tidak ada rincian pembaruan untuk versi ini.</p>;
+  }
+
+  return (
+    <div 
+      // whitespace-pre-wrap memastikan baris baru (\n) dari deskripsi commit tetap terjaga
+      className="prose prose-blue max-w-none text-slate-700 font-medium whitespace-pre-wrap text-sm leading-relaxed"
+    >
+      {infoUpdate.releaseNotes}
+    </div>
+  );
+};
+
   const handleInstallRestart = () => {
     setIsApplying(true);
     if (typeof window !== "undefined" && (window as any).require) {
