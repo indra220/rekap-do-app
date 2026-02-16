@@ -32,4 +32,5 @@ export interface TemplateData {
   direktur: string; 
   jabatan: string;
   tembusan: string[];
+  no_so_prefix?: string;
 }

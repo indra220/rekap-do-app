@@ -7,26 +7,24 @@ import { formatDesimal, formatTanggalIndo, formatTanggalEnglish } from "./helper
 import { SOData, TemplateData } from "@/types";
 
 // ==========================================
-// EXPORT EXCEL (UPDATE: KOLOM I LEBIH LEBAR)
+// EXPORT EXCEL
 // ==========================================
 export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData, periode: string) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Rekap DO");
     
-    // Konfigurasi Lebar Kolom
     worksheet.columns = [
-      { width: 5 },  // A: NO
-      { width: 15 }, // B: TANGGAL SO
-      { width: 25 }, // C: NO SO/TGL SALUR
-      { width: 30 }, // D: PENGECER
-      { width: 20 }, // E: KECAMATAN
-      { width: 12 }, // F: Stok Awal
-      { width: 12 }, // G: Pengadaan
-      { width: 12 }, // H: Penyaluran
-      { width: 30 }  // I: Stok Akhir (DIPERLEBAR AGAR TTD TIDAK POTONG)
+      { width: 5 },  
+      { width: 15 }, 
+      { width: 25 }, 
+      { width: 30 }, 
+      { width: 20 }, 
+      { width: 12 }, 
+      { width: 12 }, 
+      { width: 12 }, 
+      { width: 30 }  
     ];
 
-    // Style Definisi
     const borderStyle = { 
       top: { style: "thin" }, 
       left: { style: "thin" }, 
@@ -38,7 +36,6 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
     const decimalFormat = '#,##0.00';
     const dateFormat = 'dd-mmm-yy'; 
 
-    // --- HELPER UNTUK BORDER ---
     const applyRowStyle = (row: ExcelJS.Row, isHeader = false) => {
       for (let i = 1; i <= 9; i++) {
         const cell = row.getCell(i);
@@ -53,7 +50,6 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
       }
     };
 
-    // 1. HEADER KANAN
     worksheet.getCell('G1').value = templateInfo.kepada;
     worksheet.getCell('G2').value = templateInfo.penerima_1;
     worksheet.getCell('G3').value = templateInfo.penerima_2;
@@ -61,7 +57,6 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
     worksheet.getCell('G5').value = templateInfo.alamat_penerima_2;
     ['G1', 'G2', 'G3', 'G4', 'G5'].forEach(c => worksheet.getCell(c).font = fontBold);
 
-    // 2. HEADER KIRI
     const leftHeaderMap = [
       { row: 6, label: "Code", val: templateInfo.code },
       { row: 7, label: "Provinsi", val: templateInfo.provinsi },
@@ -80,35 +75,36 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
       worksheet.getCell(`C${item.row}`).font = fontBold;
     });
 
-    // 3. JUDUL (RATA KIRI)
     worksheet.getCell('I14').value = templateInfo.jenis_pupuk;
     worksheet.getCell('I14').font = fontBold;
     worksheet.getCell('I14').alignment = { horizontal: 'left' }; 
 
-    // 4. HEADER TABEL
     const hRow = worksheet.getRow(15);
     hRow.values = ["NO", "TANGGAL SO", "NO SO/TGL SALUR", "PENGECER", "KECAMATAN", "Stok Awal", "Pengadaan", "Penyaluran", "Stok Akhir"];
     applyRowStyle(hRow, true);
 
-    // 5. SPACER AWAL
     let currentRow = 16;
     const spacerRow = worksheet.getRow(currentRow++);
     spacerRow.values = ["", "", "", "", "", "", "", "", ""];
     applyRowStyle(spacerRow);
 
-    // 6. ISI DATA
     let tAwal = 0, tAda = 0, tLur = 0;
 
     soList.forEach((so, idx) => {
         let cur = (so.stokAwal || 0) + (so.pengadaan || 0);
         tAwal += (so.stokAwal || 0); tAda += (so.pengadaan || 0);
         
-        // --- Baris Induk ---
+        let finalNoSO = so.noSO;
+        const prefix = (templateInfo as any).no_so_prefix;
+        if (prefix && finalNoSO && !finalNoSO.startsWith(prefix)) {
+            finalNoSO = `${prefix}${finalNoSO}`;
+        }
+
         const rSO = worksheet.getRow(currentRow++);
         rSO.values = [
             idx + 1,                                
             so.tanggalSO ? new Date(so.tanggalSO) : "", 
-            so.noSO,                                
+            finalNoSO,                                
             "",                                     
             so.kecamatan,                           
             so.stokAwal || 0,                       
@@ -118,16 +114,14 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
         ];
         applyRowStyle(rSO);
 
-        // Style Khusus Baris Induk (Abu-abu & Center)
         for (let i = 1; i <= 9; i++) {
           rSO.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
         }
-        rSO.getCell(1).alignment = { horizontal: 'center' }; // NO
-        rSO.getCell(2).alignment = { horizontal: 'center' }; // TGL SO
-        rSO.getCell(3).alignment = { horizontal: 'center' }; // NO SO
+        rSO.getCell(1).alignment = { horizontal: 'center' }; 
+        rSO.getCell(2).alignment = { horizontal: 'center' }; 
+        rSO.getCell(3).alignment = { horizontal: 'center' }; 
         rSO.getCell(2).numFmt = dateFormat;
 
-        // --- Baris Anak ---
         so.penyaluranList.forEach(det => {
             cur -= (det.penyaluran || 0); 
             tLur += (det.penyaluran || 0);
@@ -142,21 +136,18 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
             ];
             applyRowStyle(rS);
             
-            // Kolom C (Index 3) = TGL SALUR -> CENTER
             rS.getCell(3).numFmt = dateFormat;
             rS.getCell(3).alignment = { horizontal: 'center' }; 
         });
         
-        // Spacer Antar DO
         const itemSpacer = worksheet.getRow(currentRow++);
         itemSpacer.values = ["", "", "", "", "", "", "", "", ""];
         applyRowStyle(itemSpacer);
     });
 
-    // 7. TOTAL ROW
     const totalRow = worksheet.getRow(currentRow);
     totalRow.values = ["", "", "", "", "", tAwal, tAda, tLur, (tAwal + tAda - tLur)];
-    worksheet.mergeCells(currentRow, 1, currentRow, 5); // Merge A-E
+    worksheet.mergeCells(currentRow, 1, currentRow, 5); 
 
     for (let i = 1; i <= 9; i++) {
       const cell = totalRow.getCell(i);
@@ -165,10 +156,8 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
       if (i >= 6) cell.numFmt = decimalFormat;
     }
 
-    // --- FOOTER (TANDA TANGAN) ---
     const signRow = currentRow + 3;
 
-    // Helper untuk set cell tanda tangan (Merge & Center)
     const setSignCell = (rowOffset: number, value: string, isBold: boolean = true) => {
         const r = signRow + rowOffset;
         worksheet.mergeCells(r, 7, r, 9);
@@ -198,13 +187,22 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
 };
 
 // ==========================================
-// EXPORT PDF
+// EXPORT PDF (UPDATE: KERTAS F4 / FOLIO)
 // ==========================================
 export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, periode: string) => {
-    const doc = new jsPDF("l", "mm", "a4");
+    // F-5 B Standar Indonesia menggunakan kertas F4/Folio (330.2 x 215.9 mm) Landscape
+    const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: [330.2, 215.9] // Panjang x Lebar F4
+    });
+
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(9); doc.setFont("helvetica", "bold");
-    const rightX = pageWidth - 80;
+    
+    // Karena kertas F4 lebih panjang dari A4, kita sesuaikan margin kanan
+    const rightX = pageWidth - 90;
 
     // Header Kanan
     doc.text(templateInfo.kepada, rightX, 15);
@@ -236,9 +234,9 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
     doc.setFont("helvetica", "bold");
     doc.text(templateInfo.jenis_pupuk, pageWidth - 30, 85, { align: 'right' });
 
-    // Build Table
+    // Tabel
     const tableData: any[] = [];
-    tableData.push(["", "", "", "", "", "", "", "", ""]); // Spacer Awal
+    tableData.push(["", "", "", "", "", "", "", "", ""]); 
 
     let tAwal = 0, tAda = 0, tLur = 0;
 
@@ -246,10 +244,16 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
       let cur = (so.stokAwal || 0) + (so.pengadaan || 0);
       tAwal += (so.stokAwal || 0); tAda += (so.pengadaan || 0);
       
+      let finalNoSO = so.noSO;
+      const prefix = (templateInfo as any).no_so_prefix;
+      if (prefix && finalNoSO && !finalNoSO.startsWith(prefix)) {
+          finalNoSO = `${prefix}${finalNoSO}`;
+      }
+
       tableData.push([
         idx + 1, 
         formatTanggalIndo(so.tanggalSO), 
-        so.noSO, "", so.kecamatan, 
+        finalNoSO, "", so.kecamatan, 
         formatDesimal(so.stokAwal || 0), 
         (so.pengadaan && so.pengadaan !== 0) ? formatDesimal(so.pengadaan) : "", 
         "", 
@@ -267,10 +271,9 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
         ]);
       });
 
-      tableData.push(["", "", "", "", "", "", "", "", ""]); // Spacer Item
+      tableData.push(["", "", "", "", "", "", "", "", ""]); 
     });
 
-    // Total Row
     tableData.push([
       { content: '', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, 
       formatDesimal(tAwal), 
@@ -288,8 +291,9 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
       bodyStyles: { lineWidth: 0.1, lineColor: [200, 200, 200] }, 
       styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
       columnStyles: { 
-        1: { halign: 'center' }, // Tanggal SO
-        2: { halign: 'center' }, // No SO / Tgl Salur
+        1: { halign: 'center' }, 
+        2: { halign: 'center', cellWidth: 35 }, // Kolom No SO sedikit diperlebar
+        3: { cellWidth: 70 }, // Kolom Pengecer diperlebar menyesuaikan kertas F4
         5: { halign: 'right' }, 
         6: { halign: 'right' }, 
         7: { halign: 'right' }, 
@@ -297,10 +301,19 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
       }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    // Auto Page-Break & Tanda Tangan
+    let finalY = (doc as any).lastAutoTable.finalY + 10;
     
-    // Titik Tengah Tanda Tangan
-    const signCenterX = pageWidth - 40; 
+    // Hitung sisa ruang untuk TTD & Tembusan
+    const spaceNeeded = 45 + (templateInfo.tembusan.length * 5);
+
+    // Jika tertabrak batas kertas bawah (Folio Height: 215.9 mm)
+    if (finalY + spaceNeeded > pageHeight) {
+      doc.addPage();
+      finalY = 20; 
+    }
+
+    const signCenterX = pageWidth - 45; 
 
     doc.text(`${templateInfo.kabupaten}, ${formatTanggalEnglish(periode)}`, signCenterX, finalY, { align: 'center' });
     doc.text(templateInfo.nama_perusahaan, signCenterX, finalY + 5, { align: 'center' });

@@ -26,7 +26,7 @@ interface ImportProps {
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-// HELPER: Mengambil teks dan memaksa format tanggal menjadi YYYY-MM-DD (Sesuai input type="date")
+// HELPER: Mengambil teks dan memaksa format tanggal menjadi YYYY-MM-DD
 const getSafeText = (cell: ExcelJS.Cell | undefined, isDate: boolean = false): string => {
   try {
     if (!cell || cell.value === null || cell.value === undefined) return "";
@@ -45,9 +45,7 @@ const getSafeText = (cell: ExcelJS.Cell | undefined, isDate: boolean = false): s
       textVal = cell.text ? String(cell.text).trim() : String(cell.value).trim();
     }
 
-    // Jika kolom ini dikhususkan untuk tanggal, coba ubah format string yang aneh menjadi YYYY-MM-DD
     if (isDate && textVal) {
-      // Coba parse string seperti "01/15/2026" atau "15-Jan-2026"
       const parsedDate = new Date(textVal);
       if (!isNaN(parsedDate.getTime())) {
         return `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}`;
@@ -96,7 +94,7 @@ export default function ImportExcel({ onDataLoaded, onClose }: ImportProps) {
         const worksheet = workbook.getWorksheet(1);
         if (!worksheet) throw new Error("Gagal membaca isi tabel.");
 
-        // --- STEP 1: PENCARIAN KOLOM YANG SANGAT KETAT ---
+        // --- STEP 1: PENCARIAN KOLOM ---
         let headerRowIndex = -1;
         let colMap: Record<string, number> = {};
         let maxFound = 0;
@@ -110,7 +108,6 @@ export default function ImportExcel({ onDataLoaded, onClose }: ImportProps) {
             const text = getSafeText(cell).toLowerCase().replace(/[^a-z0-9]/g, '');
             if (!text) return;
             
-            // Pencocokan sesuai urutan kolom aplikasi Anda:
             if (text.includes('tanggalso') || text.includes('tglso')) { currentMap.tanggalSO = colNumber; foundCount++; }
             else if (text.includes('noso') || text.includes('tglsalur') || text.includes('nosotglsalur')) { currentMap.noSOTglSalur = colNumber; foundCount++; }
             else if (text.includes('pengecer') || text.includes('kios') || text.includes('pembeli')) { currentMap.pengecer = colNumber; foundCount++; }
@@ -131,16 +128,15 @@ export default function ImportExcel({ onDataLoaded, onClose }: ImportProps) {
           throw new Error("Gagal menemukan baris judul. Pastikan format kolom sama dengan aplikasi.");
         }
 
-        // --- STEP 2: MAPPING SESUAI PENEMPATAN UI APLIKASI ---
+        // --- STEP 2: MAPPING DATA ---
         const finalData: SOData[] = [];
         let currentSO: SOData | null = null;
 
         worksheet.eachRow((row, rowNumber) => {
           if (rowNumber <= headerRowIndex) return; 
 
-          // Ambil data mentah per baris
-          const rawTglSO = getSafeText(row.getCell(colMap.tanggalSO), true); // True = Paksa format YYYY-MM-DD
-          const rawGabungan = getSafeText(row.getCell(colMap.noSOTglSalur)); // Ini bisa No SO, bisa Tgl Salur
+          const rawTglSO = getSafeText(row.getCell(colMap.tanggalSO), true);
+          const rawGabungan = getSafeText(row.getCell(colMap.noSOTglSalur));
           const rawKecamatan = getSafeText(row.getCell(colMap.kecamatan));
           const valStokAwal = parseFloat(getSafeText(row.getCell(colMap.stokAwal))) || 0;
           const valPengadaan = parseFloat(getSafeText(row.getCell(colMap.pengadaan))) || 0;
@@ -148,19 +144,21 @@ export default function ImportExcel({ onDataLoaded, onClose }: ImportProps) {
           const rawPengecer = getSafeText(row.getCell(colMap.pengecer));
           const valPenyaluran = parseFloat(getSafeText(row.getCell(colMap.penyaluran))) || 0;
 
-          // Lewati jika baris benar-benar kosong
-          if (!rawTglSO && !rawGabungan && !rawKecamatan && !rawPengecer && valPengadaan === 0 && valPenyaluran === 0) return;
+          // --- LOGIKA FILTER ANTI BARIS TOTAL ---
+          // Jika sebuah baris tidak punya identitas teks (Tgl SO, No SO, Pengecer, Kecamatan) sama sekali, 
+          // maka pasti itu baris "JUMLAH" atau baris kosong yang nyasar. Abaikan!
+          if (!rawTglSO && !rawGabungan && !rawPengecer && !rawKecamatan) {
+            return; 
+          }
 
-          // LOGIKA PEMISAH (Apakah ini baris Induk SO atau baris Rincian Penyaluran?)
-          // Jika baris ini memiliki Tanggal SO, Kecamatan, atau Pengadaan, maka ini adalah Induk Baru
+          // Deteksi apakah ini Induk (SO) atau Anak (Penyaluran)
           const isParentRow = rawTglSO !== "" || rawKecamatan !== "" || valPengadaan > 0 || valStokAwal > 0 || (!currentSO && rawGabungan !== "");
 
           if (isParentRow) {
-            // BUAT BARIS INDUK
             currentSO = {
               id: generateId(),
               tanggalSO: rawTglSO,
-              noSO: rawGabungan, // Di baris induk, kolom gabungan DITEMPATKAN SEBAGAI 'No SO'
+              noSO: rawGabungan,
               kecamatan: rawKecamatan,
               stokAwal: valStokAwal,
               pengadaan: valPengadaan,
@@ -168,19 +166,15 @@ export default function ImportExcel({ onDataLoaded, onClose }: ImportProps) {
             };
             finalData.push(currentSO);
 
-            // Jika di baris induk ini juga ada data penyaluran (sebaris), masukkan sebagai anak
             if (rawPengecer !== "" || valPenyaluran > 0) {
               currentSO.penyaluranList.push({
                 id: generateId(),
-                tglSalur: "", // Kosong, karena input UI sudah dipakai untuk No SO
+                tglSalur: "", 
                 pengecer: rawPengecer,
                 penyaluran: valPenyaluran
               });
             }
           } else if (currentSO) {
-            // BUAT BARIS RINCIAN (ANAK)
-            // Di baris anak, kolom gabungan DITEMPATKAN SEBAGAI 'Tgl Salur'
-            // Kita panggil getSafeText lagi dengan isDate=true untuk memastikan formatnya valid
             const formattedTglSalur = getSafeText(row.getCell(colMap.noSOTglSalur), true); 
 
             currentSO.penyaluranList.push({
@@ -195,7 +189,7 @@ export default function ImportExcel({ onDataLoaded, onClose }: ImportProps) {
         if (finalData.length === 0) throw new Error("Tidak ada data transaksi yang bisa diimpor.");
 
         onDataLoaded(finalData);
-        setStatus({ type: 'success', msg: `Berhasil mengimpor dan menyusun ${finalData.length} Data SO.` });
+        setStatus({ type: 'success', msg: `Berhasil mengimpor ${finalData.length} Data SO.` });
         
         setTimeout(() => onClose(), 1500);
 
