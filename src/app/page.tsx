@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, FileSpreadsheet, CornerDownRight, Box, RefreshCw, CheckCircle2, X, ChevronDown, CheckSquare, Square, Upload } from "lucide-react";
+import { Plus, Trash2, FileSpreadsheet, CornerDownRight, Box, RefreshCw, CheckCircle2, X, CheckSquare, Square, Upload, Eye } from "lucide-react";
 
 import { PenyaluranData, SOData } from "@/types";
 import { generateId, formatDesimal } from "@/utils/helpers";
@@ -11,6 +11,11 @@ import TemplateEditor from "@/components/TemplateEditor";
 import UpdateView from "@/components/UpdateView";
 import ImportExcel from "@/components/ImportExcel";
 import { exportToExcel, exportToPDF } from "@/utils/exporter";
+
+// IMPORT KOMPONEN GLOBAL BARU
+import Toast from "@/components/Toast";
+import ConfirmModal from "@/components/ConfirmModal";
+import PreviewExportModal from "@/components/PreviewExportModal";
 
 declare global {
   interface Window {
@@ -28,25 +33,37 @@ if (typeof window !== "undefined" && (window as any).require) {
   ipcRenderer = (window as any).require("electron").ipcRenderer;
 }
 
-// FORMAT DATA MASTER BARU
 const defaultMasterData = {
   profiles: [{ id: 'default', nama_preset: 'Profil Utama', ...defaultTemplate }],
   tujuans: [{ id: 'default', nama_preset: 'Tujuan Utama', ...defaultTemplate }],
   ttds: [{ id: 'default', nama_preset: 'TTD Utama', ...defaultTemplate }],
   tembusans: [{ id: 'default', nama_preset: 'Tembusan Utama', list: defaultTemplate.tembusan || [] }],
-  active: { profileId: 'default', tujuanId: 'default', ttdId: 'default', tembusanId: 'default' }
+  active: { profileId: 'default', tujuanId: 'default', ttdId: 'default', tembusanId: 'default' },
+  exportHistory: [],
+  kiosList: [] 
 };
 
 export default function Home() {
   const [view, setView] = useState<"dashboard" | "template" | "update">("dashboard");
   const [isSyncing, setIsSyncing] = useState(true);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  
+  // STATE NOTIFIKASI (TOAST)
+  const [toast, setToast] = useState<{show: boolean, msg: string, type: 'success' | 'error'}>({show: false, msg: '', type: 'success'});
+  
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ show: true, msg, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [periode, setPeriode] = useState(new Date().toISOString().slice(0, 10));
   
-  // State Master Data Modular
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean; title: string; message: string; type: 'danger' | 'warning'; onConfirm: () => void;
+  }>({ isOpen: false, title: "", message: "", type: 'danger', onConfirm: () => {} });
+
   const [masterData, setMasterData] = useState<any>(defaultMasterData);
-  
   const [soList, setSoList] = useState<SOData[]>([{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -59,7 +76,6 @@ export default function Home() {
   const focusTargetIdRef = useRef<string | null>(null);
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // 1. COMPUTED ACTIVE TEMPLATE: Menggabungkan pecahan data sesuai pilihan dropdown user
   const activeTemplate = React.useMemo(() => {
     const p = masterData.profiles?.find((x: any) => x.id === masterData.active.profileId) || masterData.profiles?.[0] || {};
     const t = masterData.tujuans?.find((x: any) => x.id === masterData.active.tujuanId) || masterData.tujuans?.[0] || {};
@@ -100,17 +116,18 @@ export default function Home() {
       try {
         const { template, solist } = await ipcRenderer.invoke('db-get-init');
         if (template) {
-          // MIGRASI OTOMATIS: Jika format lama (flat), ubah ke format Master Data Modular
           if (!template.profiles) {
             setMasterData({
               profiles: [{ id: 'legacy', nama_preset: 'Data Lama', ...template }],
               tujuans: [{ id: 'legacy', nama_preset: 'Data Lama', ...template }],
               ttds: [{ id: 'legacy', nama_preset: 'Data Lama', ...template }],
               tembusans: [{ id: 'legacy', nama_preset: 'Data Lama', list: template.tembusan || [] }],
-              active: { profileId: 'legacy', tujuanId: 'legacy', ttdId: 'legacy', tembusanId: 'legacy' }
+              active: { profileId: 'legacy', tujuanId: 'legacy', ttdId: 'legacy', tembusanId: 'legacy' },
+              exportHistory: [],
+              kiosList: []
             });
           } else {
-            setMasterData(template);
+            setMasterData({ ...template, exportHistory: template.exportHistory || [], kiosList: template.kiosList || [] });
           }
         }
         if (solist && solist.length > 0) setSoList(solist);
@@ -137,6 +154,34 @@ export default function Home() {
 
   const handleDataImported = (importedData: SOData[]) => {
     setSoList(prev => [...prev.filter(p => p.noSO !== ""), ...importedData]);
+    
+    let isKiosUpdated = false;
+    const updatedKiosList = [...(masterData.kiosList || [])];
+
+    importedData.forEach(so => {
+      so.penyaluranList.forEach(peny => {
+        if (peny.pengecer && peny.pengecer.trim() !== "") {
+          const exists = updatedKiosList.find(k => k.namaKios.toLowerCase() === peny.pengecer.trim().toLowerCase());
+          if (!exists) {
+            updatedKiosList.push({ id: generateId(), namaKios: peny.pengecer.trim(), kecamatan: so.kecamatan || "" });
+            isKiosUpdated = true;
+          } else if (!exists.kecamatan && so.kecamatan) {
+             exists.kecamatan = so.kecamatan;
+             isKiosUpdated = true;
+          }
+        }
+      });
+    });
+
+    if (isKiosUpdated) {
+      const newMasterData = { ...masterData, kiosList: updatedKiosList };
+      setMasterData(newMasterData);
+      if (ipcRenderer) {
+        ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: newMasterData });
+      }
+    }
+
+    showToast("Data Excel/CSV berhasil di-import!", "success");
   };
 
   const getModifiedSoListForExport = () => {
@@ -146,6 +191,45 @@ export default function Home() {
       ...so,
       noSO: (so.noSO && !so.noSO.startsWith(prefix)) ? `${prefix}${so.noSO}` : so.noSO
     }));
+  };
+
+  const executeExport = (format: 'EXCEL' | 'PDF') => {
+    try {
+      const dataToExport = getModifiedSoListForExport();
+      
+      if (format === 'EXCEL') exportToExcel(dataToExport, activeTemplate, periode);
+      if (format === 'PDF') exportToPDF(dataToExport, activeTemplate, periode);
+
+      const newHistoryRecord = {
+        id: generateId(),
+        waktu_export: new Date().toISOString(),
+        periode_laporan: periode,
+        jenis_pupuk: activeTemplate.jenis_pupuk || "Tanpa Nama",
+        format: format,
+        total_do: dataToExport.length,
+        total_pengadaan: dataToExport.reduce((acc, so) => acc + (so.pengadaan || 0), 0),
+        total_penyaluran: dataToExport.reduce((acc, so) => acc + so.penyaluranList.reduce((a, b) => a + (b.penyaluran || 0), 0), 0),
+        data_snapshot: dataToExport 
+      };
+
+      const updatedMasterData = { 
+        ...masterData, 
+        exportHistory: [newHistoryRecord, ...(masterData.exportHistory || [])] 
+      };
+      
+      setMasterData(updatedMasterData);
+      if (ipcRenderer) {
+        ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: updatedMasterData });
+      }
+
+      const emptySoList = [{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }];
+      setSoList(emptySoList);
+      
+      setIsPreviewModalOpen(false);
+      showToast(`Berhasil di-export ke ${format} & data telah di-reset!`, "success");
+    } catch (error) {
+      showToast(`Gagal melakukan export data.`, "error");
+    }
   };
 
   const openUpdatePage = () => { setHasUpdateNotification(false); setView("update"); };
@@ -159,16 +243,72 @@ export default function Home() {
   const updatePenyaluran = (soId: string, salurId: string, field: keyof PenyaluranData, value: string | number) => setSoList(soList.map(so => so.id === soId ? {...so, penyaluranList: so.penyaluranList.map(s => s.id === salurId ? {...s, [field]: value} : s)} : so));
   const toggleSelectAll = () => { const allIds: string[] = []; soList.forEach(so => { allIds.push(so.id); so.penyaluranList.forEach(p => allIds.push(p.id)); }); setSelectedIds(selectedIds.length === allIds.length ? [] : allIds); };
   const toggleSelect = (id: string) => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  const deleteSelected = () => { if (confirm(`Hapus ${selectedIds.length} item?`)) { setSoList(prev => { const f = prev.filter(so => !selectedIds.includes(so.id)); const u = f.map(so => ({ ...so, penyaluranList: so.penyaluranList.filter(p => !selectedIds.includes(p.id)) })); return u.length > 0 ? u : [{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]; }); setSelectedIds([]); }};
+  
+  const deleteSelected = () => { 
+    setConfirmModal({
+      isOpen: true,
+      title: `Hapus ${selectedIds.length} Item?`,
+      message: "Data yang dihapus akan hilang dari tampilan. Pastikan Anda memilih data yang benar.",
+      type: 'danger',
+      onConfirm: () => {
+        setSoList(prev => { 
+          const f = prev.filter(so => !selectedIds.includes(so.id)); 
+          const u = f.map(so => ({ ...so, penyaluranList: so.penyaluranList.filter(p => !selectedIds.includes(p.id)) })); 
+          return u.length > 0 ? u : [{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]; 
+        }); 
+        setSelectedIds([]);
+        setConfirmModal(prev => ({...prev, isOpen: false}));
+        showToast("Data terpilih berhasil dihapus.", "success");
+      }
+    });
+  };
 
-  if (view === "template") return <TemplateEditor masterData={masterData} setMasterData={setMasterData} onBack={() => setView("dashboard")} />;
+  if (view === "template") {
+    return (
+      <TemplateEditor 
+        masterData={masterData} 
+        setMasterData={setMasterData} 
+        onBack={() => setView("dashboard")} 
+        onLoadHistory={(data, periodeH) => {
+          setSoList(data);
+          setPeriode(periodeH);
+          setView("dashboard");
+        }}
+        onReExportHistory={(format, data, periodeH) => {
+          if (format === 'EXCEL') exportToExcel(data, activeTemplate, periodeH);
+          if (format === 'PDF') exportToPDF(data, activeTemplate, periodeH);
+        }}
+      />
+    );
+  }
+  
   if (view === "update") return <UpdateView infoUpdate={updateInfo} isChecking={isChecking} statusDownload={statusDownload} progress={downloadProgress} onStartDownload={triggerDownload} onBack={() => setView("dashboard")} />;
 
   const inputClass = "w-full bg-transparent border-none focus:ring-0 px-2 py-1 text-sm font-bold text-slate-800 outline-none";
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8 relative">
+      
+      <Toast show={toast.show} msg={toast.msg} type={toast.type} />
+
       {isImportModalOpen && <ImportExcel onDataLoaded={handleDataImported} onClose={() => setIsImportModalOpen(false)} />}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen} 
+        title={confirmModal.title} 
+        message={confirmModal.message} 
+        type={confirmModal.type} 
+        confirmText="Hapus Sekarang"
+        onConfirm={confirmModal.onConfirm} 
+        onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} 
+      />
+
+      <PreviewExportModal 
+        isOpen={isPreviewModalOpen}
+        dataList={getModifiedSoListForExport()}
+        onCancel={() => setIsPreviewModalOpen(false)}
+        onExport={executeExport}
+      />
 
       <div className="max-w-[1600px] mx-auto space-y-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex justify-between items-center relative">
@@ -176,7 +316,7 @@ export default function Home() {
           <div className="flex items-center gap-5">
             <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-xl shadow-blue-200"><FileSpreadsheet size={32} /></div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Rekapitulasi DO {activeTemplate.jenis_pupuk || ""}</h1>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Rekapitulasi Penyaluran DO</h1>
               <div className="flex items-center gap-2 mt-1">
                 {isSyncing ? 
                   <span className="text-[10px] text-blue-500 font-black uppercase animate-pulse flex items-center gap-1"><RefreshCw size={12} className="animate-spin"/> Syncing...</span> : 
@@ -191,7 +331,6 @@ export default function Home() {
               {hasUpdateNotification && <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] text-white animate-bounce border-2 border-white font-black">!</span>}
             </button>
             
-            {/* TULISAN TOMBOL BERUBAH MENJADI MENU DATA */}
             <button onClick={() => setView("template")} className="bg-slate-100 px-6 py-2.5 rounded-2xl font-black text-sm text-slate-700 hover:bg-slate-200 transition border border-slate-200 shadow-sm">
               Menu Data
             </button>
@@ -203,21 +342,9 @@ export default function Home() {
                 <Upload size={16}/> Import
               </button>
               
-              <div className="relative">
-                <button onClick={() => setIsExportMenuOpen(!isExportMenuOpen)} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-200 uppercase text-xs tracking-widest flex items-center gap-3 border-2 border-blue-500">
-                  Export <ChevronDown size={20} className={`transition-transform duration-200 ${isExportMenuOpen ? 'rotate-180' : ''}`}/>
-                </button>
-                {isExportMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                    <button onClick={() => { exportToExcel(getModifiedSoListForExport(), activeTemplate, periode); setIsExportMenuOpen(false); }} className="w-full text-left px-5 py-3 text-sm font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 transition">
-                      Format Excel (.xlsx)
-                    </button>
-                    <button onClick={() => { exportToPDF(getModifiedSoListForExport(), activeTemplate, periode); setIsExportMenuOpen(false); }} className="w-full text-left px-5 py-3 text-sm font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-2 transition border-t border-slate-50">
-                      Format PDF (.pdf)
-                    </button>
-                  </div>
-                )}
-              </div>
+              <button onClick={() => setIsPreviewModalOpen(true)} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-200 uppercase text-xs tracking-widest flex items-center gap-2 border-2 border-blue-500">
+                <Eye size={18}/> Preview Laporan
+              </button>
             </div>
           </div>
         </div>

@@ -117,6 +117,11 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
         for (let i = 1; i <= 9; i++) {
           rSO.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
         }
+        
+        // BOLD UNTUK TANGGAL SO DAN NO SO DI EXCEL
+        rSO.getCell(2).font = fontBold;
+        rSO.getCell(3).font = fontBold;
+        
         rSO.getCell(1).alignment = { horizontal: 'center' }; 
         rSO.getCell(2).alignment = { horizontal: 'center' }; 
         rSO.getCell(3).alignment = { horizontal: 'center' }; 
@@ -187,31 +192,27 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
 };
 
 // ==========================================
-// EXPORT PDF (UPDATE: KERTAS F4 / FOLIO)
+// EXPORT PDF
 // ==========================================
 export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, periode: string) => {
-    // F-5 B Standar Indonesia menggunakan kertas F4/Folio (330.2 x 215.9 mm) Landscape
     const doc = new jsPDF({
         orientation: "landscape",
         unit: "mm",
-        format: [330.2, 215.9] // Panjang x Lebar F4
+        format: [330.2, 215.9] 
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(9); doc.setFont("helvetica", "bold");
     
-    // Karena kertas F4 lebih panjang dari A4, kita sesuaikan margin kanan
     const rightX = pageWidth - 90;
 
-    // Header Kanan
     doc.text(templateInfo.kepada, rightX, 15);
     doc.text(templateInfo.penerima_1, rightX, 20);
     doc.text(templateInfo.penerima_2, rightX, 25);
     doc.text(templateInfo.alamat_penerima_1, rightX, 30);
     doc.text(templateInfo.alamat_penerima_2, rightX, 35);
 
-    // Header Kiri
     doc.setFont("helvetica", "normal");
     const leftHeader = [
       { l: "Code", v: `: ${templateInfo.code}` },
@@ -234,7 +235,6 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
     doc.setFont("helvetica", "bold");
     doc.text(templateInfo.jenis_pupuk, pageWidth - 30, 85, { align: 'right' });
 
-    // Tabel
     const tableData: any[] = [];
     tableData.push(["", "", "", "", "", "", "", "", ""]); 
 
@@ -250,10 +250,13 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
           finalNoSO = `${prefix}${finalNoSO}`;
       }
 
+      // BOLD UNTUK TANGGAL SO DAN NO SO DI PDF
       tableData.push([
         idx + 1, 
-        formatTanggalIndo(so.tanggalSO), 
-        finalNoSO, "", so.kecamatan, 
+        { content: formatTanggalIndo(so.tanggalSO), styles: { fontStyle: 'bold' } }, 
+        { content: finalNoSO, styles: { fontStyle: 'bold' } }, 
+        "", 
+        so.kecamatan, 
         formatDesimal(so.stokAwal || 0), 
         (so.pengadaan && so.pengadaan !== 0) ? formatDesimal(so.pengadaan) : "", 
         "", 
@@ -292,8 +295,8 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
       styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
       columnStyles: { 
         1: { halign: 'center' }, 
-        2: { halign: 'center', cellWidth: 35 }, // Kolom No SO sedikit diperlebar
-        3: { cellWidth: 70 }, // Kolom Pengecer diperlebar menyesuaikan kertas F4
+        2: { halign: 'center', cellWidth: 35 }, 
+        3: { cellWidth: 70 }, 
         5: { halign: 'right' }, 
         6: { halign: 'right' }, 
         7: { halign: 'right' }, 
@@ -301,13 +304,10 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
       }
     });
 
-    // Auto Page-Break & Tanda Tangan
     let finalY = (doc as any).lastAutoTable.finalY + 10;
     
-    // Hitung sisa ruang untuk TTD & Tembusan
     const spaceNeeded = 45 + (templateInfo.tembusan.length * 5);
 
-    // Jika tertabrak batas kertas bawah (Folio Height: 215.9 mm)
     if (finalY + spaceNeeded > pageHeight) {
       doc.addPage();
       finalY = 20; 

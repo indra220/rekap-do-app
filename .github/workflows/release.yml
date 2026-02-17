@@ -1,6 +1,5 @@
 name: Build and Release Electron App
 
-# PENGATURAN: Jalan otomatis setiap kali ada push ke branch 'main'
 on:
   push:
     tags:
@@ -32,19 +31,29 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FULL_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          # Skrip Python untuk membuang baris pertama dan mengambil sisanya
-          SAFE_MSG=$(echo "$FULL_COMMIT_MSG" | python3 -c "import sys, json; lines = sys.stdin.readlines(); desc = ''.join(lines[1:]).strip(); print(json.dumps(desc).strip('\"'))")
+          # Mengambil SELURUH baris deskripsi commit tanpa terpotong
+          SAFE_MSG=$(echo "$FULL_COMMIT_MSG" | python3 -c "import sys, json; text = sys.stdin.read().strip(); print(json.dumps(text).strip('\"'))")
 
           cat <<EOF > update-config.json
           {
             "releaseInfo": {
               "releaseNotes": "$SAFE_MSG"
-            },
-            "publish": {
-              "provider": "github",
-              "releaseType": "release"
             }
           }
           EOF
 
-          npm run dist -- --publish always -c update-config.json
+          echo "File update-config.json berhasil dibuat:"
+          cat update-config.json
+
+          npm run build:win
+
+      - name: 5. Mengunggah update-config.json ke GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
+            update-config.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
