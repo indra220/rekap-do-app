@@ -1,5 +1,6 @@
 name: Build and Release Electron App
 
+# PENGATURAN: Jalan automatik setiap kali ada push tag 'v*' ke repository
 on:
   push:
     tags:
@@ -13,7 +14,7 @@ jobs:
       contents: write 
 
     steps:
-      - name: 1. Mendownload kode dari Repository
+      - name: 1. Muat turun kod dari Repository
         uses: actions/checkout@v4
 
       - name: 2. Mempersiapkan Node.js
@@ -22,16 +23,16 @@ jobs:
           node-version: 24
           cache: 'npm'
 
-      - name: 3. Menginstall Dependencies
+      - name: 3. Memasang Dependencies
         run: npm install
 
-      - name: 4. Build Aplikasi dan Publish ke GitHub Release
+      - name: 4. Build Aplikasi dan Publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FULL_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          # Mengambil SELURUH baris deskripsi commit tanpa terpotong
+          # Mengambil KESELURUHAN baris deskripsi commit tanpa terpotong
           SAFE_MSG=$(echo "$FULL_COMMIT_MSG" | python3 -c "import sys, json; text = sys.stdin.read().strip(); print(json.dumps(text).strip('\"'))")
 
           cat <<EOF > update-config.json
@@ -42,12 +43,13 @@ jobs:
           }
           EOF
 
-          echo "File update-config.json berhasil dibuat:"
+          echo "Fail update-config.json berjaya dibuat:"
           cat update-config.json
 
-          npm run build:win
+          # Melaksanakan arahan build yang biasa anda gunakan
+          npm run dist -- --publish always
 
-      - name: 5. Mengunggah update-config.json ke GitHub Release
+      - name: 5. Mengunggah fail tambahan ke GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
