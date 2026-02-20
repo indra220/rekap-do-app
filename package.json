@@ -1,6 +1,7 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.25",
+  "version": "1.0.27",
+  "description": "Aplikasi Rekapitulasi Delivery Order (DO) Pupuk",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -55,7 +56,8 @@
     "appId": "com.megaagrosanjaya.rekapdo",
     "productName": "Aplikasi Rekap DO",
     "directories": {
-      "output": "../Aplikasi Rekap DO"
+      "output": "../Aplikasi Rekap DO",
+      "buildResources": "build"
     },
     "asar": true, 
     "asarUnpack": [
@@ -84,6 +86,7 @@
       }
     ],
     "win": {
+      "icon": "app/favicon.ico",
       "target": "nsis"
     },
     "files": [

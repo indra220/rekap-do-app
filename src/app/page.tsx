@@ -12,7 +12,7 @@ import UpdateView from "@/components/UpdateView";
 import ImportExcel from "@/components/ImportExcel";
 import { exportToExcel, exportToPDF } from "@/utils/exporter";
 
-// IMPORT KOMPONEN GLOBAL BARU
+// IMPORT KOMPONEN GLOBAL
 import Toast from "@/components/Toast";
 import ConfirmModal from "@/components/ConfirmModal";
 import PreviewExportModal from "@/components/PreviewExportModal";
@@ -114,7 +114,8 @@ export default function Home() {
     if (!ipcRenderer) { setIsSyncing(false); return; }
     (async () => {
       try {
-        const { template, solist } = await ipcRenderer.invoke('db-get-init');
+        // PERUBAHAN: Hanya memuat `template`, sengaja TIDAK memuat `solist` agar selalu ter-reset
+        const { template } = await ipcRenderer.invoke('db-get-init');
         if (template) {
           if (!template.profiles) {
             setMasterData({
@@ -130,7 +131,10 @@ export default function Home() {
             setMasterData({ ...template, exportHistory: template.exportHistory || [], kiosList: template.kiosList || [] });
           }
         }
-        if (solist && solist.length > 0) setSoList(solist);
+        
+        // Membersihkan data soList di database lokal saat aplikasi dimulai ulang
+        ipcRenderer.invoke('db-save', { table: 'solistdata', id: 'current_session', data: [] });
+
       } catch (err) { console.error(err); } finally { setIsSyncing(false); }
     })();
   }, []);
@@ -316,7 +320,7 @@ export default function Home() {
           <div className="flex items-center gap-5">
             <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-xl shadow-blue-200"><FileSpreadsheet size={32} /></div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Rekapitulasi Penyaluran DO</h1>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Rekapitulasi DO {activeTemplate.jenis_pupuk || ""}</h1>
               <div className="flex items-center gap-2 mt-1">
                 {isSyncing ? 
                   <span className="text-[10px] text-blue-500 font-black uppercase animate-pulse flex items-center gap-1"><RefreshCw size={12} className="animate-spin"/> Syncing...</span> : 
@@ -449,6 +453,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+
     </div>
   );
 }
