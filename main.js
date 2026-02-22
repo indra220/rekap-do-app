@@ -83,27 +83,47 @@ ipcMain.handle('db-save', (event, { table, id, data }) => {
 // =========================================================
 ipcMain.handle('get-patch-history', async () => {
   try {
-    // Karena repo sekarang publik, kita tidak butuh Authorization header lagi
-    const response = await fetch('https://api.github.com/repos/indra220/rekap-do-app/releases', {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'rekap-do-app-electron'
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'rekap-do-app-electron'
+    };
+
+    // Mengambil Releases, Tags, dan Commits secara paralel
+    const [releaseRes, tagsRes, commitsRes] = await Promise.all([
+      fetch('https://api.github.com/repos/indra220/rekap-do-app/releases', { headers }),
+      fetch('https://api.github.com/repos/indra220/rekap-do-app/tags', { headers }),
+      fetch('https://api.github.com/repos/indra220/rekap-do-app/commits', { headers })
+    ]);
+    
+    const releases = releaseRes.ok ? await releaseRes.json() : [];
+    const tags = tagsRes.ok ? await tagsRes.json() : [];
+    const commits = commitsRes.ok ? await commitsRes.json() : [];
+    
+    return releases.map(r => {
+      let notes = r.body;
+
+      // Jika catatan rilis dari GitHub kosong, cari deskripsi dari pesan commit
+      if (!notes || notes.trim() === "") {
+        const tag = tags.find(t => t.name === r.tag_name);
+        if (tag) {
+          const commit = commits.find(c => c.sha === tag.commit.sha);
+          if (commit) {
+            notes = commit.commit.message;
+          }
+        }
       }
+
+      // Fallback terakhir jika rilis maupun commit benar-benar tidak memiliki deskripsi
+      if (!notes || notes.trim() === "") {
+         notes = "Pembaruan sistem dan perbaikan minor.";
+      }
+
+      return {
+        version: r.tag_name,
+        date: new Date(r.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        notes: notes
+      };
     });
-    
-    if (!response.ok) {
-      console.error("GitHub API Error:", response.status, response.statusText);
-      return [];
-    }
-    
-    const releases = await response.json();
-    
-    // Mapping format balasan API GitHub ke format yang mudah dibaca Frontend
-    return releases.map(r => ({
-      version: r.tag_name,
-      date: new Date(r.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-      notes: r.body || "Tidak ada rincian pembaruan yang dilampirkan pada versi ini."
-    }));
   } catch (e) {
     console.error("Gagal melakukan proses fetch dari GitHub:", e);
     return [];
@@ -146,7 +166,6 @@ const createWindow = () => {
     provider: 'github',
     owner: 'indra220',
     repo: 'rekap-do-app'
-    // private: true dan token dihapus karena tidak lagi diperlukan
   });
 
   autoUpdater.autoDownload = false;
