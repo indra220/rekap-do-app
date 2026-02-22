@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useState, useEffect } from "react";
-import { Download, RefreshCcw, ArrowLeft, ShieldCheck, CheckCircle2, Loader2, Clock, Search, FileText, ChevronDown } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Download, RefreshCcw, ArrowLeft, ShieldCheck, CheckCircle2, Loader2, Clock, Search, FileText, ChevronDown, Github } from "lucide-react";
 
 interface UpdateViewProps {
   infoUpdate: any;
@@ -11,22 +11,6 @@ interface UpdateViewProps {
   onStartDownload: () => void;
   onBack: () => void;
 }
-
-// ==========================================
-// DATA RIWAYAT PATCH NOTES STATIS
-// ==========================================
-const PATCH_HISTORY = [
-  {
-    version: "v1.0.25",
-    date: "17 Feb 2026",
-    notes: "Pembaruan besar pada antarmuka dan penambahan database pintar.\n(-) Penambahan fitur Auto-Backup dan Riwayat Export\n(-) Master Data Kios & Kecamatan tersimpan otomatis saat Import\n(-) Notifikasi Pintar (Global Toast) & Custom Confirm Modal\n(-) Pemisahan komponen UI menjadi Modular (Tabs)\n(-) Tanggal SO dan No SO otomatis tercetak tebal (Bold) pada hasil Export"
-  },
-  {
-    version: "v1.0.24",
-    date: "10 Feb 2026",
-    notes: "Rilis stabil dengan perbaikan core engine.\n(-) Import Excel cerdas anti-crash (Dynamic Header Scanning)\n(-) Export PDF disesuaikan ke format F4 (Folio) Landscape\n(-) Fitur Awalan No SO (Prefix Default) otomatis\n(-) Perombakan Master Data Template dinamis"
-  }
-];
 
 export default function UpdateView({ 
   infoUpdate, 
@@ -39,44 +23,62 @@ export default function UpdateView({
   
   const [isApplying, setIsApplying] = useState(false);
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
+  const [patchHistory, setPatchHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
-  // MENGGABUNGKAN DATA UPDATE TERBARU (DARI GITHUB) DENGAN HISTORY LAMA
-  const allPatchNotes = React.useMemo(() => {
-    const history = [...PATCH_HISTORY];
+  // MENGAMBIL DATA DINAMIS DARI GITHUB API MELALUI ELECTRON IPC
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).require) {
+      const ipc = (window as any).require("electron").ipcRenderer;
+      ipc.invoke('get-patch-history')
+        .then((data: any[]) => {
+          setPatchHistory(data || []);
+          setIsLoadingHistory(false);
+        })
+        .catch((err: any) => {
+          console.error("Gagal mengambil riwayat dari github:", err);
+          setIsLoadingHistory(false);
+        });
+    } else {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  // MENGGABUNGKAN DATA UPDATE TERBARU DENGAN HISTORY GITHUB
+  const allPatchNotes = useMemo(() => {
+    const history = [...patchHistory];
     
+    // Jika ada update baru yang terdeteksi tapi belum muncul di Github History
     if (infoUpdate && infoUpdate.version) {
-      const isAlreadyInHistory = history.some(h => h.version === infoUpdate.version);
+      const formattedVersion = infoUpdate.version.startsWith('v') ? infoUpdate.version : `v${infoUpdate.version}`;
+      const isAlreadyInHistory = history.some(h => h.version === formattedVersion);
+      
       if (!isAlreadyInHistory) {
         history.unshift({
-          version: infoUpdate.version,
-          date: "Pembaruan Baru",
+          version: formattedVersion,
+          date: "Pembaruan Terbaru",
           notes: infoUpdate.releaseNotes || "Tidak ada rincian pembaruan yang dilampirkan."
         });
       }
     }
     return history;
-  }, [infoUpdate]);
+  }, [infoUpdate, patchHistory]);
 
-  // Otomatis membuka tab versi paling atas (terbaru) saat halaman dimuat
-  useEffect(() => {
-    if (allPatchNotes.length > 0 && !expandedVersion) {
-      setExpandedVersion(allPatchNotes[0].version);
-    }
-  }, [allPatchNotes, expandedVersion]);
-
-  // PEMINDAI TEKS PINTAR (PARSER)
+  // PEMINDAI TEKS PINTAR (PARSER) UNTUK MARKDOWN GITHUB
   const renderParsedNotes = (rawText: string) => {
     if (!rawText) return <p className="text-slate-500 italic text-sm">Tidak ada catatan untuk versi ini.</p>;
     
-    // Konversi simbol menjadi format list
-    let processedText = rawText.replace(/\(-\)/g, '\n- ').replace(/\(\*\)/g, '\n* ');
-    const lines = processedText.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
+    const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
 
     return (
       <ul className="space-y-3 mt-2">
         {lines.map((line: string, index: number) => {
-          if (line.startsWith('-') || line.startsWith('*')) {
-            const cleanText = line.substring(1).trim();
+          // Deteksi list standard markdown Github (- atau *) atau format kustom sebelumnya (-) atau (*)
+          const isListItem = line.startsWith('- ') || line.startsWith('* ') || line.startsWith('(-)') || line.startsWith('(*)');
+          
+          if (isListItem) {
+            // Bersihkan simbol peluru (bullet)
+            const cleanText = line.replace(/^(-\s*|\*\s*|\(-\)\s*|\(\*\)\s*)/, '').trim();
             return (
               <li key={index} className="flex items-start gap-3 text-slate-600 text-sm group transition-all hover:text-slate-900">
                 <span className="text-blue-500 font-black mt-0.5 group-hover:scale-125 transition-transform">•</span>
@@ -84,10 +86,12 @@ export default function UpdateView({
               </li>
             );
           } else {
+            // Format judul/teks biasa
+            const cleanTitle = line.replace(/^#+\s*/, ''); // Hapus hashtag markdown header
             return (
               <li key={index} className={`list-none ${index !== 0 ? 'mt-5' : ''}`}>
                 <span className="text-slate-800 font-black bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest inline-block mb-1">
-                  {line}
+                  {cleanTitle}
                 </span>
               </li>
             );
@@ -101,7 +105,7 @@ export default function UpdateView({
     setIsApplying(true);
     if (typeof window !== "undefined" && (window as any).require) {
       const ipc = (window as any).require("electron").ipcRenderer;
-      ipc.send("pasang-update-dan-restart");
+      ipc.send("install-dan-restart"); 
     }
   };
 
@@ -185,39 +189,49 @@ export default function UpdateView({
           {/* BAGIAN PATCH NOTES (ACCORDION) */}
           <div className="animate-in fade-in duration-500 delay-150">
             <div className="flex items-center gap-2 mb-4 px-2">
-              <FileText size={20} className="text-blue-500"/>
-              <h3 className="text-lg font-black text-slate-800 tracking-tight">Riwayat Pembaruan (Patch Notes)</h3>
+              <h3 className="text-lg font-black text-slate-800 tracking-tight">Riwayat Pembaruan</h3>
             </div>
             
-            <div className="space-y-3">
-              {allPatchNotes.map((patch) => {
-                const isExpanded = expandedVersion === patch.version;
-                const isLatest = patch.version === infoUpdate?.version;
-                
-                return (
-                  <div key={patch.version} className={`border rounded-2xl overflow-hidden transition-all duration-300 shadow-sm ${isExpanded ? 'border-blue-300 bg-white' : 'border-slate-200 bg-white hover:border-blue-200'}`}>
-                    <button 
-                      onClick={() => setExpandedVersion(isExpanded ? null : patch.version)} 
-                      className="w-full px-6 py-4 flex justify-between items-center text-left hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className={`font-black text-sm px-3 py-1.5 rounded-xl border ${isLatest ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
-                          {patch.version}
-                        </span>
-                        <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5"><Clock size={12}/> {patch.date}</span>
-                      </div>
-                      <ChevronDown size={20} className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-600' : ''}`} />
-                    </button>
-                    
-                    <div className={`transition-all duration-300 ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
-                      <div className="px-8 pb-6 pt-2 border-t border-slate-100">
-                        {renderParsedNotes(patch.notes)}
+            {isLoadingHistory ? (
+              <div className="flex justify-center items-center py-12 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                <Loader2 className="animate-spin text-blue-500" size={32} />
+                <span className="ml-3 font-bold text-slate-500 text-sm">Menghubungkan ke server GitHub...</span>
+              </div>
+            ) : allPatchNotes.length > 0 ? (
+              <div className="space-y-3">
+                {allPatchNotes.map((patch) => {
+                  const isExpanded = expandedVersion === patch.version;
+                  const isLatest = patch.version === infoUpdate?.version || patch.version === `v${infoUpdate?.version}`;
+                  
+                  return (
+                    <div key={patch.version} className={`border rounded-2xl overflow-hidden transition-all duration-300 shadow-sm ${isExpanded ? 'border-blue-300 bg-white' : 'border-slate-200 bg-white hover:border-blue-200'}`}>
+                      <button 
+                        onClick={() => setExpandedVersion(isExpanded ? null : patch.version)} 
+                        className="w-full px-6 py-4 flex justify-between items-center text-left hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className={`font-black text-sm px-3 py-1.5 rounded-xl border ${isLatest ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+                            {patch.version}
+                          </span>
+                          <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5"><Clock size={12}/> {patch.date}</span>
+                        </div>
+                        <ChevronDown size={20} className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-600' : ''}`} />
+                      </button>
+                      
+                      <div className={`transition-all duration-300 ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
+                        <div className="px-8 pb-6 pt-2 border-t border-slate-100">
+                          {renderParsedNotes(patch.notes)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-3xl border border-slate-200 shadow-sm text-slate-500 font-bold text-sm">
+                Belum ada riwayat pembaruan yang ditemukan
+              </div>
+            )}
           </div>
 
         </div>

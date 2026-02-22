@@ -1,8 +1,7 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "description": "Aplikasi Rekapitulasi Delivery Order (DO) Pupuk",
-  "private": true,
   "main": "main.js",
   "scripts": {
     "dev": "concurrently \"next dev\" \"cross-env WAITING_DIST=false electron .\"",
@@ -10,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "pack": "next build && electron-builder --dir",
-    "dist": "next build && dotenv -- electron-builder",
+    "dist": "next build && electron-builder",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "postinstall": "electron-builder install-app-deps"
   },
@@ -25,7 +24,7 @@
     "electron-updater": "^6.7.3",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
-    "jspdf": "^4.1.0",
+    "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.475.0",
     "next": "^15.5.12",
@@ -33,6 +32,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/better-sqlite3": "^7.6.13",
@@ -45,12 +45,19 @@
     "dotenv-cli": "^11.0.0",
     "electron": "^40.3.0",
     "electron-builder": "^26.7.0",
-    "electron-rebuild": "^3.2.9",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "^5"
+  },
+  "overrides": {
+    "glob": "^10.3.10",
+    "rimraf": "^5.0.5",
+    "inflight": "^1.0.6",
+    "are-we-there-yet": "^4.0.0",
+    "gauge": "^5.0.0",
+    "npmlog": "^7.0.0"
   },
   "build": {
     "appId": "com.megaagrosanjaya.rekapdo",
@@ -59,9 +66,9 @@
       "output": "dist",
       "buildResources": "build"
     },
-    "asar": true, 
+    "asar": true,
     "asarUnpack": [
-    "**/node_modules/better-sqlite3/**/*"
+      "**/node_modules/better-sqlite3/**/*"
     ],
     "nsis": {
       "oneClick": false,
@@ -79,10 +86,9 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "indra220", 
+        "owner": "indra220",
         "repo": "rekap-do-app",
-        "releaseType": "release",
-        "private": true
+        "releaseType": "release"
       }
     ],
     "win": {

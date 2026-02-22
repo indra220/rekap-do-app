@@ -32,5 +32,9 @@ export interface TemplateData {
   direktur: string; 
   jabatan: string;
   tembusan: string[];
+  phonska_a1?: string;
+  phonska_a2?: string;
+  phonska_a3?: string;
+  phonska_a4?: string;
   no_so_prefix?: string;
 }

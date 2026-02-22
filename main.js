@@ -12,7 +12,7 @@ const dbPath = path.join(app.getPath('userData'), 'rekap_do_v2.db');
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
-// PERBAIKAN: Menambahkan pembuatan tabel rekap_do beserta PRIMARY KEY
+// Pembuatan tabel rekap_do beserta PRIMARY KEY
 db.exec(`
   CREATE TABLE IF NOT EXISTS rekapdotemplate (id TEXT PRIMARY KEY, content TEXT, updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);
   CREATE TABLE IF NOT EXISTS solistdata (id TEXT PRIMARY KEY, content TEXT, updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);
@@ -39,7 +39,6 @@ ipcMain.handle('db-get-init', () => {
 });
 
 ipcMain.handle('save-imported-data', async (event, data) => {
-  // PERBAIKAN: Menggunakan try-catch agar aplikasi tidak crash jika format data rusak
   try {
     const insert = db.prepare(`
       INSERT INTO rekap_do (no_do, customer, tanggal, item, jumlah) 
@@ -51,7 +50,7 @@ ipcMain.handle('save-imported-data', async (event, data) => {
         jumlah=excluded.jumlah
     `);
 
-    // Gunakan transaction untuk kecepatan (sangat penting jika data ribuan)
+    // Menggunakan transaction untuk kecepatan
     const insertMany = db.transaction((rows) => {
       for (const row of rows) {
         insert.run(row.no_do, row.customer, row.tanggal, row.item, row.jumlah);
@@ -79,6 +78,39 @@ ipcMain.handle('db-save', (event, { table, id, data }) => {
   }
 });
 
+// =========================================================
+// FITUR BARU: API UNTUK MENGAMBIL RIWAYAT UPDATE DARI GITHUB
+// =========================================================
+ipcMain.handle('get-patch-history', async () => {
+  try {
+    // Karena repo sekarang publik, kita tidak butuh Authorization header lagi
+    const response = await fetch('https://api.github.com/repos/indra220/rekap-do-app/releases', {
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'rekap-do-app-electron'
+      }
+    });
+    
+    if (!response.ok) {
+      console.error("GitHub API Error:", response.status, response.statusText);
+      return [];
+    }
+    
+    const releases = await response.json();
+    
+    // Mapping format balasan API GitHub ke format yang mudah dibaca Frontend
+    return releases.map(r => ({
+      version: r.tag_name,
+      date: new Date(r.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+      notes: r.body || "Tidak ada rincian pembaruan yang dilampirkan pada versi ini."
+    }));
+  } catch (e) {
+    console.error("Gagal melakukan proses fetch dari GitHub:", e);
+    return [];
+  }
+});
+// =========================================================
+
 const appServe = app.isPackaged ? serve({ directory: path.join(__dirname, 'out') }) : null;
 
 const createWindow = () => {
@@ -87,8 +119,8 @@ const createWindow = () => {
     height: 950,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: true, 
+      contextIsolation: false, 
     },
     autoHideMenuBar: true,
     show: false,
@@ -109,18 +141,18 @@ const createWindow = () => {
     loadDevServer();
   }
 
-  // Konfigurasi Auto Updater
+  // Konfigurasi Auto Updater untuk Repositori Publik
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'indra220',
-    repo: 'rekap-do-app',
-    private: true,
-    token: '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' // PASTIKAN TOKEN INI VALID
+    repo: 'rekap-do-app'
+    // private: true dan token dihapus karena tidak lagi diperlukan
   });
 
   autoUpdater.autoDownload = false;
 
   mainWindow.webContents.once('did-finish-load', () => {
+    // Langsung cek update karena repo sudah publik
     autoUpdater.checkForUpdates();
   });
 };
@@ -136,12 +168,10 @@ autoUpdater.on('checking-for-update', () => {
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
-  // Mengirim objek progres yang berisi persen download
   if (mainWindow) mainWindow.webContents.send('update-download-progress', progressObj);
 });
 
 autoUpdater.on('update-not-available', () => {
-  // Sinyal penting agar UI tahu pengecekan selesai dan tidak ada update
   if (mainWindow) mainWindow.webContents.send('update-tidak-ada');
 });
 

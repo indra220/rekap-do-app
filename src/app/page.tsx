@@ -33,10 +33,26 @@ if (typeof window !== "undefined" && (window as any).require) {
   ipcRenderer = (window as any).require("electron").ipcRenderer;
 }
 
+// PERBAIKAN: Memisahkan default template agar tidak terjadi kontaminasi silang sejak instalasi awal
+const defaultProfile = {
+  code: defaultTemplate.code, provinsi: defaultTemplate.provinsi, nama_perusahaan: defaultTemplate.nama_perusahaan,
+  alamat_perusahaan: defaultTemplate.alamat_perusahaan, telp: defaultTemplate.telp, email: defaultTemplate.email,
+  kabupaten: defaultTemplate.kabupaten, jenis_pupuk: defaultTemplate.jenis_pupuk
+};
+
+const defaultTujuan = {
+  kepada: defaultTemplate.kepada, penerima_1: defaultTemplate.penerima_1, penerima_2: defaultTemplate.penerima_2,
+  alamat_penerima_1: defaultTemplate.alamat_penerima_1, alamat_penerima_2: defaultTemplate.alamat_penerima_2
+};
+
+const defaultTtd = {
+  direktur: defaultTemplate.direktur, jabatan: defaultTemplate.jabatan
+};
+
 const defaultMasterData = {
-  profiles: [{ id: 'default', nama_preset: 'Profil Utama', ...defaultTemplate }],
-  tujuans: [{ id: 'default', nama_preset: 'Tujuan Utama', ...defaultTemplate }],
-  ttds: [{ id: 'default', nama_preset: 'TTD Utama', ...defaultTemplate }],
+  profiles: [{ id: 'default', nama_preset: 'Profil Utama', ...defaultProfile }],
+  tujuans: [{ id: 'default', nama_preset: 'Tujuan Utama', ...defaultTujuan }],
+  ttds: [{ id: 'default', nama_preset: 'TTD Utama', ...defaultTtd }],
   tembusans: [{ id: 'default', nama_preset: 'Tembusan Utama', list: defaultTemplate.tembusan || [] }],
   active: { profileId: 'default', tujuanId: 'default', ttdId: 'default', tembusanId: 'default' },
   exportHistory: [],
@@ -77,12 +93,46 @@ export default function Home() {
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   const activeTemplate = React.useMemo(() => {
-    const p = masterData.profiles?.find((x: any) => x.id === masterData.active.profileId) || masterData.profiles?.[0] || {};
-    const t = masterData.tujuans?.find((x: any) => x.id === masterData.active.tujuanId) || masterData.tujuans?.[0] || {};
-    const ttd = masterData.ttds?.find((x: any) => x.id === masterData.active.ttdId) || masterData.ttds?.[0] || {};
-    const tem = masterData.tembusans?.find((x: any) => x.id === masterData.active.tembusanId) || masterData.tembusans?.[0] || { list: [] };
+    const active = masterData?.active || {};
 
-    return { ...defaultTemplate, ...p, ...t, ...ttd, tembusan: tem.list || [] };
+    // Mengambil data mentah (Raw Data) dari pilihan user
+    const rawP = active.profileId === 'none' ? {} : (masterData.profiles?.find((x: any) => x.id === active.profileId) || {});
+    const rawT = active.tujuanId === 'none' ? {} : (masterData.tujuans?.find((x: any) => x.id === active.tujuanId) || {});
+    const rawTtd = active.ttdId === 'none' ? {} : (masterData.ttds?.find((x: any) => x.id === active.ttdId) || {});
+    const rawTem = active.tembusanId === 'none' ? { list: [] } : (masterData.tembusans?.find((x: any) => x.id === active.tembusanId) || { list: [] });
+
+    // PERBAIKAN: EKSTRAKSI EKSPLISIT (Karantina Data)
+    // Hal ini membersihkan kontaminasi data dari database SQLite versi lama Anda.
+    return { 
+      // --- FIELD DARI PROFIL ---
+      code: rawP.code || "",
+      provinsi: rawP.provinsi || "",
+      nama_perusahaan: rawP.nama_perusahaan || "",
+      alamat_perusahaan: rawP.alamat_perusahaan || "",
+      telp: rawP.telp || "",
+      email: rawP.email || "",
+      kabupaten: rawP.kabupaten || "",
+      jenis_pupuk: rawP.jenis_pupuk || "",
+      no_so_prefix: rawP.no_so_prefix || "",
+      phonska_a1: rawP.phonska_a1 || "",
+      phonska_a2: rawP.phonska_a2 || "",
+      phonska_a3: rawP.phonska_a3 || "",
+      phonska_a4: rawP.phonska_a4 || "",
+
+      // --- FIELD DARI TUJUAN ---
+      kepada: rawT.kepada || "",
+      penerima_1: rawT.penerima_1 || "",
+      penerima_2: rawT.penerima_2 || "",
+      alamat_penerima_1: rawT.alamat_penerima_1 || "",
+      alamat_penerima_2: rawT.alamat_penerima_2 || "",
+
+      // --- FIELD DARI TTD ---
+      direktur: rawTtd.direktur || "",
+      jabatan: rawTtd.jabatan || "",
+
+      // --- FIELD DARI TEMBUSAN ---
+      tembusan: rawTem.list || []
+    };
   }, [masterData]);
 
   useEffect(() => {
@@ -114,25 +164,34 @@ export default function Home() {
     if (!ipcRenderer) { setIsSyncing(false); return; }
     (async () => {
       try {
-        // PERUBAHAN: Hanya memuat `template`, sengaja TIDAK memuat `solist` agar selalu ter-reset
         const { template } = await ipcRenderer.invoke('db-get-init');
         if (template) {
           if (!template.profiles) {
             setMasterData({
-              profiles: [{ id: 'legacy', nama_preset: 'Data Lama', ...template }],
-              tujuans: [{ id: 'legacy', nama_preset: 'Data Lama', ...template }],
-              ttds: [{ id: 'legacy', nama_preset: 'Data Lama', ...template }],
-              tembusans: [{ id: 'legacy', nama_preset: 'Data Lama', list: template.tembusan || [] }],
+              profiles: [{ id: 'legacy', nama_preset: 'Data Lama', ...defaultProfile }],
+              tujuans: [{ id: 'legacy', nama_preset: 'Data Lama', ...defaultTujuan }],
+              ttds: [{ id: 'legacy', nama_preset: 'Data Lama', ...defaultTtd }],
+              tembusans: [{ id: 'legacy', nama_preset: 'Data Lama', list: defaultTemplate.tembusan || [] }],
               active: { profileId: 'legacy', tujuanId: 'legacy', ttdId: 'legacy', tembusanId: 'legacy' },
               exportHistory: [],
               kiosList: []
             });
           } else {
-            setMasterData({ ...template, exportHistory: template.exportHistory || [], kiosList: template.kiosList || [] });
+            const safeActive = {
+              profileId: template.active?.profileId || 'default',
+              tujuanId: template.active?.tujuanId || 'default',
+              ttdId: template.active?.ttdId || 'default',
+              tembusanId: template.active?.tembusanId || 'default'
+            };
+            setMasterData({ 
+              ...template, 
+              active: safeActive, 
+              exportHistory: template.exportHistory || [], 
+              kiosList: template.kiosList || [] 
+            });
           }
         }
         
-        // Membersihkan data soList di database lokal saat aplikasi dimulai ulang
         ipcRenderer.invoke('db-save', { table: 'solistdata', id: 'current_session', data: [] });
 
       } catch (err) { console.error(err); } finally { setIsSyncing(false); }
@@ -307,9 +366,11 @@ export default function Home() {
         onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} 
       />
 
+      {/* PERBAIKAN: Mengirimkan templateInfo={activeTemplate} */}
       <PreviewExportModal 
         isOpen={isPreviewModalOpen}
         dataList={getModifiedSoListForExport()}
+        templateInfo={activeTemplate}
         onCancel={() => setIsPreviewModalOpen(false)}
         onExport={executeExport}
       />

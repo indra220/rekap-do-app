@@ -1,17 +1,22 @@
 import React from "react";
-import { Eye, X, FileSpreadsheet, FileText, CornerDownRight } from "lucide-react";
+import { Eye, X, FileSpreadsheet, FileText, CornerDownRight, FileBadge } from "lucide-react";
 import { formatDesimal } from "@/utils/helpers";
 import { SOData } from "@/types";
 
 interface PreviewExportModalProps {
   isOpen: boolean;
   dataList: SOData[];
+  templateInfo: any; // Menerima data template aktif
   onCancel: () => void;
   onExport: (format: 'EXCEL' | 'PDF') => void;
 }
 
-export default function PreviewExportModal({ isOpen, dataList, onCancel, onExport }: PreviewExportModalProps) {
+export default function PreviewExportModal({ isOpen, dataList, templateInfo, onCancel, onExport }: PreviewExportModalProps) {
   if (!isOpen) return null;
+
+  // Pengecekan cerdas apakah data benar-benar kosong
+  const isTujuanEmpty = !templateInfo?.kepada && !templateInfo?.penerima_1 && !templateInfo?.penerima_2;
+  const isTtdEmpty = !templateInfo?.direktur && !templateInfo?.jabatan;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -28,6 +33,43 @@ export default function PreviewExportModal({ isOpen, dataList, onCancel, onExpor
         </div>
 
         <div className="p-8 overflow-auto flex-1 bg-slate-50 custom-scrollbar">
+          
+          {/* INFORMASI TEMPLATE AKTIF (VERSI MINIMALIS) */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-6 shadow-sm flex flex-wrap gap-y-4 gap-x-8 items-center">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
+                <FileBadge size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-black uppercase">Tipe Template</p>
+                <p className="text-sm font-black text-blue-700">{templateInfo?.jenis_pupuk || "Tidak ada"}</p>
+              </div>
+            </div>
+            
+            <div className="w-px h-8 bg-slate-200 hidden md:block"></div>
+            
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase">Tujuan Laporan</p>
+              <p className="text-sm font-bold text-slate-700">{isTujuanEmpty ? "Tidak ada" : (templateInfo?.kepada || templateInfo?.penerima_1 || "Ada")}</p>
+            </div>
+            
+            <div className="w-px h-8 bg-slate-200 hidden md:block"></div>
+            
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase">Otorisasi (TTD)</p>
+              <p className="text-sm font-bold text-slate-700">{isTtdEmpty ? "Tidak ada" : (templateInfo?.direktur || templateInfo?.jabatan || "Ada")}</p>
+            </div>
+            
+            <div className="w-px h-8 bg-slate-200 hidden md:block"></div>
+            
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase">Daftar Tembusan</p>
+              <p className="text-sm font-bold text-slate-700">
+                {templateInfo?.tembusan?.length > 0 ? `${templateInfo.tembusan.length} Item` : "Tidak ada"}
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
               <p className="text-[10px] text-slate-400 font-black uppercase mb-1">Total DO Tercatat</p>
@@ -43,7 +85,7 @@ export default function PreviewExportModal({ isOpen, dataList, onCancel, onExpor
             </div>
           </div>
 
-          <div className="overflow-auto max-h-[350px] custom-scrollbar border border-slate-200 rounded-2xl bg-white shadow-sm">
+          <div className="overflow-auto max-h-[250px] custom-scrollbar border border-slate-200 rounded-2xl bg-white shadow-sm">
             <table className="w-full text-xs text-left border-collapse whitespace-nowrap">
               <thead className="bg-slate-100 text-slate-600 uppercase font-black sticky top-0 border-b border-slate-200 z-10">
                 <tr>
