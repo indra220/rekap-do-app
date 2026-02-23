@@ -33,7 +33,6 @@ if (typeof window !== "undefined" && (window as any).require) {
   ipcRenderer = (window as any).require("electron").ipcRenderer;
 }
 
-// PERBAIKAN: Memisahkan default template agar tidak terjadi kontaminasi silang sejak instalasi awal
 const defaultProfile = {
   code: defaultTemplate.code, provinsi: defaultTemplate.provinsi, nama_perusahaan: defaultTemplate.nama_perusahaan,
   alamat_perusahaan: defaultTemplate.alamat_perusahaan, telp: defaultTemplate.telp, email: defaultTemplate.email,
@@ -73,7 +72,10 @@ export default function Home() {
 
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [periode, setPeriode] = useState(new Date().toISOString().slice(0, 10));
+  
+  // PERBAIKAN: Memisahkan state Tanggal TTD dan Tanggal Periode Laporan
+  const [tanggalTtd, setTanggalTtd] = useState(new Date().toISOString().slice(0, 10));
+  const [tanggalPeriode, setTanggalPeriode] = useState(new Date().toISOString().slice(0, 10));
   
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean; title: string; message: string; type: 'danger' | 'warning'; onConfirm: () => void;
@@ -95,16 +97,12 @@ export default function Home() {
   const activeTemplate = React.useMemo(() => {
     const active = masterData?.active || {};
 
-    // Mengambil data mentah (Raw Data) dari pilihan user
     const rawP = active.profileId === 'none' ? {} : (masterData.profiles?.find((x: any) => x.id === active.profileId) || {});
     const rawT = active.tujuanId === 'none' ? {} : (masterData.tujuans?.find((x: any) => x.id === active.tujuanId) || {});
     const rawTtd = active.ttdId === 'none' ? {} : (masterData.ttds?.find((x: any) => x.id === active.ttdId) || {});
     const rawTem = active.tembusanId === 'none' ? { list: [] } : (masterData.tembusans?.find((x: any) => x.id === active.tembusanId) || { list: [] });
 
-    // PERBAIKAN: EKSTRAKSI EKSPLISIT (Karantina Data)
-    // Hal ini membersihkan kontaminasi data dari database SQLite versi lama Anda.
     return { 
-      // --- FIELD DARI PROFIL ---
       code: rawP.code || "",
       provinsi: rawP.provinsi || "",
       nama_perusahaan: rawP.nama_perusahaan || "",
@@ -118,19 +116,13 @@ export default function Home() {
       phonska_a2: rawP.phonska_a2 || "",
       phonska_a3: rawP.phonska_a3 || "",
       phonska_a4: rawP.phonska_a4 || "",
-
-      // --- FIELD DARI TUJUAN ---
       kepada: rawT.kepada || "",
       penerima_1: rawT.penerima_1 || "",
       penerima_2: rawT.penerima_2 || "",
       alamat_penerima_1: rawT.alamat_penerima_1 || "",
       alamat_penerima_2: rawT.alamat_penerima_2 || "",
-
-      // --- FIELD DARI TTD ---
       direktur: rawTtd.direktur || "",
       jabatan: rawTtd.jabatan || "",
-
-      // --- FIELD DARI TEMBUSAN ---
       tembusan: rawTem.list || []
     };
   }, [masterData]);
@@ -260,13 +252,16 @@ export default function Home() {
     try {
       const dataToExport = getModifiedSoListForExport();
       
-      if (format === 'EXCEL') exportToExcel(dataToExport, activeTemplate, periode);
-      if (format === 'PDF') exportToPDF(dataToExport, activeTemplate, periode);
+      // Inject tanggal periode ke dalam templateInfo agar bisa dibaca exporter
+      const templateWithPeriode = { ...activeTemplate, tanggal_periode: tanggalPeriode };
+      
+      if (format === 'EXCEL') exportToExcel(dataToExport, templateWithPeriode, tanggalTtd);
+      if (format === 'PDF') exportToPDF(dataToExport, templateWithPeriode, tanggalTtd);
 
       const newHistoryRecord = {
         id: generateId(),
         waktu_export: new Date().toISOString(),
-        periode_laporan: periode,
+        periode_laporan: tanggalPeriode, // Simpan periode laporan
         jenis_pupuk: activeTemplate.jenis_pupuk || "Tanpa Nama",
         format: format,
         total_do: dataToExport.length,
@@ -334,12 +329,14 @@ export default function Home() {
         onBack={() => setView("dashboard")} 
         onLoadHistory={(data, periodeH) => {
           setSoList(data);
-          setPeriode(periodeH);
+          setTanggalPeriode(periodeH);
+          setTanggalTtd(new Date().toISOString().slice(0, 10)); // Default TTD hari ini untuk riwayat
           setView("dashboard");
         }}
         onReExportHistory={(format, data, periodeH) => {
-          if (format === 'EXCEL') exportToExcel(data, activeTemplate, periodeH);
-          if (format === 'PDF') exportToPDF(data, activeTemplate, periodeH);
+          const templateWithPeriode = { ...activeTemplate, tanggal_periode: periodeH };
+          if (format === 'EXCEL') exportToExcel(data, templateWithPeriode, tanggalTtd);
+          if (format === 'PDF') exportToPDF(data, templateWithPeriode, tanggalTtd);
         }}
       />
     );
@@ -366,11 +363,10 @@ export default function Home() {
         onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} 
       />
 
-      {/* PERBAIKAN: Mengirimkan templateInfo={activeTemplate} */}
       <PreviewExportModal 
         isOpen={isPreviewModalOpen}
         dataList={getModifiedSoListForExport()}
-        templateInfo={activeTemplate}
+        templateInfo={{ ...activeTemplate, tanggal_periode: tanggalPeriode }}
         onCancel={() => setIsPreviewModalOpen(false)}
         onExport={executeExport}
       />
@@ -400,7 +396,9 @@ export default function Home() {
               Menu Data
             </button>
 
-            <input type="date" className="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm font-black bg-slate-50 text-slate-900 outline-none" value={periode} onChange={e => setPeriode(e.target.value)} />
+            <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-2xl">
+              <input type="date" className="bg-transparent text-sm font-black text-slate-900 outline-none" value={tanggalTtd} onChange={e => setTanggalTtd(e.target.value)} />
+            </div>
             
             <div className="relative flex gap-2">
               <button onClick={() => setIsImportModalOpen(true)} className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-200 uppercase text-xs tracking-widest flex items-center gap-2 border-2 border-emerald-500">
@@ -422,7 +420,15 @@ export default function Home() {
                 <button onClick={deleteSelected} className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all"><Trash2 size={14}/> Hapus Terpilih ({selectedIds.length})</button>
               )}
             </div>
-            <button onClick={addSO} className="bg-slate-900 text-white px-8 py-2.5 rounded-xl flex items-center gap-2 text-sm font-black hover:bg-slate-800 transition shadow-lg"><Plus size={20}/> Tambah DO Baru</button>
+            
+            {/* Input Tanggal Periode Baru di sebelah Tambah DO Baru */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl shadow-inner">
+                <span className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-wider">Periode:</span>
+                <input type="date" className="bg-transparent text-sm font-black text-slate-800 outline-none" value={tanggalPeriode} onChange={e => setTanggalPeriode(e.target.value)} />
+              </div>
+              <button onClick={addSO} className="bg-slate-900 text-white px-8 py-2.5 rounded-xl flex items-center gap-2 text-sm font-black hover:bg-slate-800 transition shadow-lg"><Plus size={20}/> Tambah DO Baru</button>
+            </div>
           </div>
 
           <div className="overflow-auto flex-1 custom-scrollbar pb-36">

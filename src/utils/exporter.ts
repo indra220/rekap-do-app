@@ -6,19 +6,24 @@ import autoTable from "jspdf-autotable";
 import { formatDesimal, formatTanggalIndo } from "./helpers";
 import { SOData, TemplateData } from "@/types";
 
+// PERBAIKAN: Menggunakan id-ID untuk format tanggal bahasa Indonesia pada tanda tangan
 const formatTanggalSignature = (dateStr: string) => {
   if (!dateStr) return "";
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
 // ==========================================
 // EXPORT EXCEL
 // ==========================================
-export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData, periode: string) => {
+export const exportToExcel = async (soList: SOData[], templateInfo: any, periode: string) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Rekap DO");
     
+    // PEMISAHAN TANGGAL: tglPeriode untuk laporan, tglTTD untuk tanda tangan
+    const tglPeriode = templateInfo.tanggal_periode || periode;
+    const tglTTD = periode;
+
     worksheet.pageSetup = {
       paperSize: 9, 
       orientation: 'portrait',
@@ -32,12 +37,12 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
       { width: 5 },   
       { width: 14 },  
       { width: 22 },  
-      { width: 26 },  
+      { width: 22 },  
       { width: 16 },  
       { width: 12 },  
-      { width: 12 },  
-      { width: 12 },  
-      { width: 12 }   
+      { width: 18 },  
+      { width: 18 },  
+      { width: 12 }     
     ];
 
     const borderStyle = { 
@@ -47,7 +52,6 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
     const fontRegular = { name: 'Arial', size: 9 }; 
     const fontBold = { name: 'Arial', size: 9, bold: true };
     const decimalFormat = '#,##0.00';
-    const dateFormat = 'dd-mmm-yy'; 
 
     const applyRowStyle = (row: ExcelJS.Row, isHeader = false) => {
       for (let i = 1; i <= 9; i++) {
@@ -69,12 +73,11 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
     let currentRow = 0;
 
     // --- KONDISI: HEADER PHONSKA vs UREA ---
-    // PERBAIKAN: Menggunakan toUpperCase() agar kebal huruf besar/kecil
     if (templateInfo.jenis_pupuk?.toUpperCase() === "PHONSKA") {
       worksheet.getCell('A1').value = templateInfo.phonska_a1 || "LAPORAN ALUR DO PT MEGA AGRO SANJAYA";
       worksheet.getCell('A2').value = templateInfo.phonska_a2 || "KAB.TASIKMALAYA PROVINSI JAWA BARAT";
       
-      const thn = new Date(periode).getFullYear();
+      const thn = new Date(tglPeriode).getFullYear();
       let a3 = templateInfo.phonska_a3 || "PERIODE TAHUN";
       if (!/\d{4}/.test(a3)) a3 = `${a3} ${thn}`;
       worksheet.getCell('A3').value = a3;
@@ -97,7 +100,6 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
       applyRowStyle(spacerRow);
 
     } else {
-      // HEADER KANAN (TUJUAN - UREA SAJA)
       const rightHeaders = [
         { cell: 'G1', val: templateInfo.kepada },
         { cell: 'G2', val: templateInfo.penerima_1 },
@@ -112,7 +114,6 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
         }
       });
 
-      // HEADER KIRI (PROFIL - UREA SAJA)
       const leftHeaderMap = [
         { row: 6, label: "Code", val: templateInfo.code },
         { row: 7, label: "Provinsi", val: templateInfo.provinsi },
@@ -121,7 +122,7 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
         { row: 10, label: "Telp/Fax", val: templateInfo.telp },
         { row: 11, label: "E-mail", val: templateInfo.email },
         { row: 12, label: "Kabupaten", val: templateInfo.kabupaten },
-        { row: 13, label: "Periode", val: formatTanggalIndo(periode) },
+        { row: 13, label: "Periode", val: formatTanggalIndo(tglPeriode) }, // Tgl Periode diterapkan di sini
       ];
 
       leftHeaderMap.forEach(item => {
@@ -165,7 +166,7 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
         const rSO = worksheet.getRow(currentRow++);
         rSO.values = [
             idx + 1,                                
-            so.tanggalSO ? new Date(so.tanggalSO) : "", 
+            so.tanggalSO ? formatTanggalIndo(so.tanggalSO) : "", 
             finalNoSO,                                
             "",                                     
             so.kecamatan,                           
@@ -182,7 +183,6 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
         
         rSO.getCell(2).font = fontBold;
         rSO.getCell(3).font = fontBold;
-        rSO.getCell(2).numFmt = dateFormat;
 
         so.penyaluranList.forEach(det => {
             cur -= (det.penyaluran || 0); 
@@ -191,13 +191,12 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
             const rS = worksheet.getRow(currentRow++);
             rS.values = [
                 "", "", 
-                det.tglSalur ? new Date(det.tglSalur) : "", 
+                det.tglSalur ? formatTanggalIndo(det.tglSalur) : "", 
                 det.pengecer, "", "", "", 
                 (det.penyaluran && det.penyaluran !== 0) ? det.penyaluran : null, 
                 cur                                     
             ];
             applyRowStyle(rS);
-            rS.getCell(3).numFmt = dateFormat;
         });
         
         const itemSpacer = worksheet.getRow(currentRow++);
@@ -217,6 +216,23 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
       if (i === 1) cell.alignment = { horizontal: 'right', vertical: 'middle' };
     }
 
+    const autoFitColumns = [2, 3, 5]; 
+    const headerRowStart = templateInfo.jenis_pupuk?.toUpperCase() === "PHONSKA" ? 6 : 15;
+
+    autoFitColumns.forEach(colIdx => {
+      let maxLength = 10; 
+      for (let r = headerRowStart; r <= currentRow; r++) {
+        const cell = worksheet.getRow(r).getCell(colIdx);
+        if (cell.value) {
+          const valLength = cell.value.toString().trim().length;
+          if (valLength > maxLength) {
+            maxLength = valLength;
+          }
+        }
+      }
+      worksheet.getColumn(colIdx).width = maxLength + 2; 
+    });
+
     // --- TTD & TEMBUSAN ---
     let nextRow = currentRow + 3;
     const hasTTD = !!templateInfo.direktur || !!templateInfo.jabatan;
@@ -232,7 +248,7 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
         };
 
         const ttdCity = templateInfo.kabupaten || "Tasikmalaya";
-        setSignCell(0, `${ttdCity}, ${formatTanggalSignature(periode)}`);
+        setSignCell(0, `${ttdCity}, ${formatTanggalSignature(tglTTD)}`); // Menggunakan Tgl TTD
         if (templateInfo.nama_perusahaan) setSignCell(1, templateInfo.nama_perusahaan);
         
         setSignCell(6, `(${templateInfo.direktur || "........................"})`);
@@ -245,7 +261,7 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
       worksheet.getCell(`A${nextRow}`).value = "Tembusan :";
       worksheet.getCell(`A${nextRow}`).font = { ...fontRegular, underline: true };
       
-      templateInfo.tembusan.forEach((t, i) => { 
+      templateInfo.tembusan.forEach((t: any, i: number) => { 
         const cell = worksheet.getCell(`A${nextRow + 1 + i}`);
         cell.value = `${i+1}. ${t}`; 
         cell.font = fontRegular;
@@ -253,19 +269,23 @@ export const exportToExcel = async (soList: SOData[], templateInfo: TemplateData
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `Rekap_DO_${templateInfo.jenis_pupuk || "Data"}_${periode}.xlsx`);
+    saveAs(new Blob([buffer]), `Rekap_DO_${templateInfo.jenis_pupuk || "Data"}_${tglPeriode}.xlsx`);
 };
 
 
 // ==========================================
 // EXPORT PDF
 // ==========================================
-export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, periode: string) => {
+export const exportToPDF = (soList: SOData[], templateInfo: any, periode: string) => {
     const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "legal" 
     });
+
+    // PEMISAHAN TANGGAL: tglPeriode untuk laporan, tglTTD untuk tanda tangan
+    const tglPeriode = templateInfo.tanggal_periode || periode;
+    const tglTTD = periode;
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -275,13 +295,12 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
     let tableHeaders: string[][] = [];
 
     // --- KONDISI: HEADER PHONSKA vs UREA ---
-    // PERBAIKAN: Menggunakan toUpperCase() agar kebal huruf besar/kecil
     if (templateInfo.jenis_pupuk?.toUpperCase() === "PHONSKA") {
         let yLeft = 15;
         doc.text(templateInfo.phonska_a1 || "LAPORAN ALUR DO PT MEGA AGRO SANJAYA", 15, yLeft); yLeft += 5;
         doc.text(templateInfo.phonska_a2 || "KAB.TASIKMALAYA PROVINSI JAWA BARAT", 15, yLeft); yLeft += 5;
         
-        const thn = new Date(periode).getFullYear();
+        const thn = new Date(tglPeriode).getFullYear();
         let a3 = templateInfo.phonska_a3 || "PERIODE TAHUN";
         if (!/\d{4}/.test(a3)) a3 = `${a3} ${thn}`;
         doc.text(a3, 15, yLeft); yLeft += 5;
@@ -313,7 +332,7 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
           { l: "Telp/Fax", v: templateInfo.telp },
           { l: "E-mail", v: templateInfo.email },
           { l: "Kabupaten", v: templateInfo.kabupaten },
-          { l: "Periode", v: formatTanggalIndo(periode) },
+          { l: "Periode", v: formatTanggalIndo(tglPeriode) }, // Tgl Periode diterapkan di sini
         ];
 
         leftHeader.forEach(h => {
@@ -396,11 +415,11 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
         0: { halign: 'center', cellWidth: 8 }, 
         1: { halign: 'center', cellWidth: 'auto' }, 
         2: { halign: 'center', cellWidth: 'auto' }, 
-        3: { cellWidth: 'auto' },               
+        3: { cellWidth: 36 },                       
         4: { cellWidth: 'auto' },                   
         5: { halign: 'right', cellWidth: 16 }, 
-        6: { halign: 'right', cellWidth: 16 }, 
-        7: { halign: 'right', cellWidth: 16 }, 
+        6: { halign: 'right', cellWidth: 18 },      
+        7: { halign: 'right', cellWidth: 18 },      
         8: { halign: 'right', cellWidth: 16 } 
       },
       margin: { left: 10, right: 10 }
@@ -423,7 +442,7 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
       const signCenterX = pageWidth - 40; 
       const ttdCity = templateInfo.kabupaten || "Tasikmalaya";
 
-      doc.text(`${ttdCity}, ${formatTanggalSignature(periode)}`, signCenterX, finalY, { align: 'center' });
+      doc.text(`${ttdCity}, ${formatTanggalSignature(tglTTD)}`, signCenterX, finalY, { align: 'center' }); // Menggunakan Tgl TTD
       if (templateInfo.nama_perusahaan) doc.text(templateInfo.nama_perusahaan, signCenterX, finalY + 5, { align: 'center' });
       
       doc.text(`(${templateInfo.direktur || "........................"})`, signCenterX, finalY + 25, { align: 'center' });
@@ -434,8 +453,8 @@ export const exportToPDF = (soList: SOData[], templateInfo: TemplateData, period
       const tembusanY = finalY + (hasTTD ? 35 : 0); 
       doc.text("Tembusan :", 15, tembusanY);
       doc.setFont("helvetica", "normal");
-      templateInfo.tembusan.forEach((t, i) => doc.text(`${i+1}. ${t}`, 15, tembusanY + 5 + (i*5)));
+      templateInfo.tembusan.forEach((t: any, i: number) => doc.text(`${i+1}. ${t}`, 15, tembusanY + 5 + (i*5)));
     }
 
-    doc.save(`Rekap_DO_${templateInfo.jenis_pupuk || "Data"}_${periode}.pdf`);
+    doc.save(`Rekap_DO_${templateInfo.jenis_pupuk || "Data"}_${tglPeriode}.pdf`);
 };

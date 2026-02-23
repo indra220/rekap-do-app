@@ -159,15 +159,15 @@ export default function ImportExcel({ onDataLoaded, onClose }: ImportProps) {
             const text = getSafeText(cell).toLowerCase().replace(/[^a-z0-9]/g, '');
             if (!text) return;
             
-            // Keyword Header
-            if (text === 'tanggalso' || text === 'tglso' || text === 'tanggal' || text === 'tgl') { currentMap.tanggalSO = colNumber; foundCount++; }
+            // Perbaikan Keyword Header (Menukar mapping Tanggal SO dan Tgl Salur)
+            if (text === 'tanggalso' || text === 'tglso' || text === 'tanggaldo' || text === 'tgldo') { currentMap.tanggalSO = colNumber; foundCount++; }
             else if (text === 'noso' || text === 'nosotglsalur' || text === 'nomorso') { currentMap.noSOTglSalur = colNumber; foundCount++; }
             else if (text.includes('pengecer') || text.includes('kios') || text.includes('pembeli') || text.includes('namappts') || text === 'ppts') { currentMap.pengecer = colNumber; foundCount++; }
             else if (text.includes('kecamatan') || text.includes('kec')) { currentMap.kecamatan = colNumber; foundCount++; }
             else if (text.includes('stokawal') || text.includes('saldoawal') || text === 'awal') { currentMap.stokAwal = colNumber; foundCount++; }
             else if (text.includes('pengadaan') || text.includes('tebus') || text.includes('masuk') || text === 'jumlah' || text === 'qty') { currentMap.pengadaan = colNumber; foundCount++; }
             else if (text.includes('penyaluran') || text.includes('salur') || text.includes('keluar')) { currentMap.penyaluran = colNumber; foundCount++; }
-            else if (text === 'tanggalsalur' || text === 'tglsalur' || text === 'tgldo') { currentMap.tglSalur = colNumber; foundCount++; }
+            else if (text === 'tanggalsalur' || text === 'tglsalur' || text === 'tanggal' || text === 'tgl') { currentMap.tglSalur = colNumber; foundCount++; }
           });
 
           if (foundCount > maxFound) {
