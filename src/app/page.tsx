@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, FileSpreadsheet, CornerDownRight, Box, RefreshCw, CheckCircle2, X, CheckSquare, Square, Upload, Eye } from "lucide-react";
+import { Plus, Trash2, FileSpreadsheet, CornerDownRight, RefreshCw, CheckCircle2, X, CheckSquare, Square, Upload, Eye, Settings, DownloadCloud } from "lucide-react";
 
 import { PenyaluranData, SOData } from "@/types";
 import { generateId, formatDesimal } from "@/utils/helpers";
@@ -62,7 +62,7 @@ export default function Home() {
   const [view, setView] = useState<"dashboard" | "template" | "update">("dashboard");
   const [isSyncing, setIsSyncing] = useState(true);
   
-  // STATE NOTIFIKASI (TOAST)
+  // STATE NOTIFIKASI
   const [toast, setToast] = useState<{show: boolean, msg: string, type: 'success' | 'error'}>({show: false, msg: '', type: 'success'});
   
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -73,7 +73,6 @@ export default function Home() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
-  // PERBAIKAN: Memisahkan state Tanggal TTD dan Tanggal Periode Laporan
   const [tanggalTtd, setTanggalTtd] = useState(new Date().toISOString().slice(0, 10));
   const [tanggalPeriode, setTanggalPeriode] = useState(new Date().toISOString().slice(0, 10));
   
@@ -96,34 +95,19 @@ export default function Home() {
 
   const activeTemplate = React.useMemo(() => {
     const active = masterData?.active || {};
-
     const rawP = active.profileId === 'none' ? {} : (masterData.profiles?.find((x: any) => x.id === active.profileId) || {});
     const rawT = active.tujuanId === 'none' ? {} : (masterData.tujuans?.find((x: any) => x.id === active.tujuanId) || {});
     const rawTtd = active.ttdId === 'none' ? {} : (masterData.ttds?.find((x: any) => x.id === active.ttdId) || {});
     const rawTem = active.tembusanId === 'none' ? { list: [] } : (masterData.tembusans?.find((x: any) => x.id === active.tembusanId) || { list: [] });
 
     return { 
-      code: rawP.code || "",
-      provinsi: rawP.provinsi || "",
-      nama_perusahaan: rawP.nama_perusahaan || "",
-      alamat_perusahaan: rawP.alamat_perusahaan || "",
-      telp: rawP.telp || "",
-      email: rawP.email || "",
-      kabupaten: rawP.kabupaten || "",
-      jenis_pupuk: rawP.jenis_pupuk || "",
-      no_so_prefix: rawP.no_so_prefix || "",
-      phonska_a1: rawP.phonska_a1 || "",
-      phonska_a2: rawP.phonska_a2 || "",
-      phonska_a3: rawP.phonska_a3 || "",
-      phonska_a4: rawP.phonska_a4 || "",
-      kepada: rawT.kepada || "",
-      penerima_1: rawT.penerima_1 || "",
-      penerima_2: rawT.penerima_2 || "",
-      alamat_penerima_1: rawT.alamat_penerima_1 || "",
-      alamat_penerima_2: rawT.alamat_penerima_2 || "",
-      direktur: rawTtd.direktur || "",
-      jabatan: rawTtd.jabatan || "",
-      tembusan: rawTem.list || []
+      code: rawP.code || "", provinsi: rawP.provinsi || "", nama_perusahaan: rawP.nama_perusahaan || "",
+      alamat_perusahaan: rawP.alamat_perusahaan || "", telp: rawP.telp || "", email: rawP.email || "",
+      kabupaten: rawP.kabupaten || "", jenis_pupuk: rawP.jenis_pupuk || "", no_so_prefix: rawP.no_so_prefix || "",
+      phonska_a1: rawP.phonska_a1 || "", phonska_a2: rawP.phonska_a2 || "", phonska_a3: rawP.phonska_a3 || "",
+      phonska_a4: rawP.phonska_a4 || "", kepada: rawT.kepada || "", penerima_1: rawT.penerima_1 || "",
+      penerima_2: rawT.penerima_2 || "", alamat_penerima_1: rawT.alamat_penerima_1 || "", alamat_penerima_2: rawT.alamat_penerima_2 || "",
+      direktur: rawTtd.direktur || "", jabatan: rawTtd.jabatan || "", tembusan: rawTem.list || []
     };
   }, [masterData]);
 
@@ -143,12 +127,9 @@ export default function Home() {
     ipcRenderer.on('update-selesai-didownload', handleUpdateDownloaded);
     ipcRenderer.on('update-error', handleUpdateError);
     return () => {
-      ipcRenderer.removeAllListeners('update-sedang-dicek');
-      ipcRenderer.removeAllListeners('update-tersedia');
-      ipcRenderer.removeAllListeners('update-tidak-ada');
-      ipcRenderer.removeAllListeners('update-download-progress');
-      ipcRenderer.removeAllListeners('update-selesai-didownload');
-      ipcRenderer.removeAllListeners('update-error');
+      ipcRenderer.removeAllListeners('update-sedang-dicek'); ipcRenderer.removeAllListeners('update-tersedia');
+      ipcRenderer.removeAllListeners('update-tidak-ada'); ipcRenderer.removeAllListeners('update-download-progress');
+      ipcRenderer.removeAllListeners('update-selesai-didownload'); ipcRenderer.removeAllListeners('update-error');
     };
   }, []);
 
@@ -165,27 +146,17 @@ export default function Home() {
               ttds: [{ id: 'legacy', nama_preset: 'Data Lama', ...defaultTtd }],
               tembusans: [{ id: 'legacy', nama_preset: 'Data Lama', list: defaultTemplate.tembusan || [] }],
               active: { profileId: 'legacy', tujuanId: 'legacy', ttdId: 'legacy', tembusanId: 'legacy' },
-              exportHistory: [],
-              kiosList: []
+              exportHistory: [], kiosList: []
             });
           } else {
             const safeActive = {
-              profileId: template.active?.profileId || 'default',
-              tujuanId: template.active?.tujuanId || 'default',
-              ttdId: template.active?.ttdId || 'default',
-              tembusanId: template.active?.tembusanId || 'default'
+              profileId: template.active?.profileId || 'default', tujuanId: template.active?.tujuanId || 'default',
+              ttdId: template.active?.ttdId || 'default', tembusanId: template.active?.tembusanId || 'default'
             };
-            setMasterData({ 
-              ...template, 
-              active: safeActive, 
-              exportHistory: template.exportHistory || [], 
-              kiosList: template.kiosList || [] 
-            });
+            setMasterData({ ...template, active: safeActive, exportHistory: template.exportHistory || [], kiosList: template.kiosList || [] });
           }
         }
-        
         ipcRenderer.invoke('db-save', { table: 'solistdata', id: 'current_session', data: [] });
-
       } catch (err) { console.error(err); } finally { setIsSyncing(false); }
     })();
   }, []);
@@ -209,7 +180,6 @@ export default function Home() {
 
   const handleDataImported = (importedData: SOData[]) => {
     setSoList(prev => [...prev.filter(p => p.noSO !== ""), ...importedData]);
-    
     let isKiosUpdated = false;
     const updatedKiosList = [...(masterData.kiosList || [])];
 
@@ -221,8 +191,7 @@ export default function Home() {
             updatedKiosList.push({ id: generateId(), namaKios: peny.pengecer.trim(), kecamatan: so.kecamatan || "" });
             isKiosUpdated = true;
           } else if (!exists.kecamatan && so.kecamatan) {
-             exists.kecamatan = so.kecamatan;
-             isKiosUpdated = true;
+             exists.kecamatan = so.kecamatan; isKiosUpdated = true;
           }
         }
       });
@@ -231,63 +200,41 @@ export default function Home() {
     if (isKiosUpdated) {
       const newMasterData = { ...masterData, kiosList: updatedKiosList };
       setMasterData(newMasterData);
-      if (ipcRenderer) {
-        ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: newMasterData });
-      }
+      if (ipcRenderer) ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: newMasterData });
     }
-
     showToast("Data Excel/CSV berhasil di-import!", "success");
   };
 
   const getModifiedSoListForExport = () => {
     const prefix = activeTemplate.no_so_prefix || "";
     if (!prefix) return soList;
-    return soList.map(so => ({
-      ...so,
-      noSO: (so.noSO && !so.noSO.startsWith(prefix)) ? `${prefix}${so.noSO}` : so.noSO
-    }));
+    return soList.map(so => ({ ...so, noSO: (so.noSO && !so.noSO.startsWith(prefix)) ? `${prefix}${so.noSO}` : so.noSO }));
   };
 
   const executeExport = (format: 'EXCEL' | 'PDF') => {
     try {
       const dataToExport = getModifiedSoListForExport();
-      
-      // Inject tanggal periode ke dalam templateInfo agar bisa dibaca exporter
       const templateWithPeriode = { ...activeTemplate, tanggal_periode: tanggalPeriode };
       
       if (format === 'EXCEL') exportToExcel(dataToExport, templateWithPeriode, tanggalTtd);
       if (format === 'PDF') exportToPDF(dataToExport, templateWithPeriode, tanggalTtd);
 
       const newHistoryRecord = {
-        id: generateId(),
-        waktu_export: new Date().toISOString(),
-        periode_laporan: tanggalPeriode, // Simpan periode laporan
-        jenis_pupuk: activeTemplate.jenis_pupuk || "Tanpa Nama",
-        format: format,
-        total_do: dataToExport.length,
+        id: generateId(), waktu_export: new Date().toISOString(), periode_laporan: tanggalPeriode, 
+        jenis_pupuk: activeTemplate.jenis_pupuk || "Tanpa Nama", format: format, total_do: dataToExport.length,
         total_pengadaan: dataToExport.reduce((acc, so) => acc + (so.pengadaan || 0), 0),
         total_penyaluran: dataToExport.reduce((acc, so) => acc + so.penyaluranList.reduce((a, b) => a + (b.penyaluran || 0), 0), 0),
         data_snapshot: dataToExport 
       };
 
-      const updatedMasterData = { 
-        ...masterData, 
-        exportHistory: [newHistoryRecord, ...(masterData.exportHistory || [])] 
-      };
-      
+      const updatedMasterData = { ...masterData, exportHistory: [newHistoryRecord, ...(masterData.exportHistory || [])] };
       setMasterData(updatedMasterData);
-      if (ipcRenderer) {
-        ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: updatedMasterData });
-      }
+      if (ipcRenderer) ipcRenderer.invoke('db-save', { table: 'rekapdotemplate', id: 'current_session', data: updatedMasterData });
 
-      const emptySoList = [{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }];
-      setSoList(emptySoList);
-      
+      setSoList([{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]);
       setIsPreviewModalOpen(false);
       showToast(`Berhasil di-export ke ${format} & data telah di-reset!`, "success");
-    } catch (error) {
-      showToast(`Gagal melakukan export data.`, "error");
-    }
+    } catch (error) { showToast(`Gagal melakukan export data.`, "error"); }
   };
 
   const openUpdatePage = () => { setHasUpdateNotification(false); setView("update"); };
@@ -304,35 +251,22 @@ export default function Home() {
   
   const deleteSelected = () => { 
     setConfirmModal({
-      isOpen: true,
-      title: `Hapus ${selectedIds.length} Item?`,
-      message: "Data yang dihapus akan hilang dari tampilan. Pastikan Anda memilih data yang benar.",
-      type: 'danger',
+      isOpen: true, title: `Hapus ${selectedIds.length} Baris?`, message: "Data yang dihapus akan hilang permanen dari lembar kerja saat ini.", type: 'danger',
       onConfirm: () => {
         setSoList(prev => { 
           const f = prev.filter(so => !selectedIds.includes(so.id)); 
           const u = f.map(so => ({ ...so, penyaluranList: so.penyaluranList.filter(p => !selectedIds.includes(p.id)) })); 
           return u.length > 0 ? u : [{ id: generateId(), tanggalSO: "", noSO: "", kecamatan: "", stokAwal: 0, pengadaan: 0, penyaluranList: [] }]; 
         }); 
-        setSelectedIds([]);
-        setConfirmModal(prev => ({...prev, isOpen: false}));
-        showToast("Data terpilih berhasil dihapus.", "success");
+        setSelectedIds([]); setConfirmModal(prev => ({...prev, isOpen: false})); showToast("Baris terpilih dihapus.", "success");
       }
     });
   };
 
   if (view === "template") {
     return (
-      <TemplateEditor 
-        masterData={masterData} 
-        setMasterData={setMasterData} 
-        onBack={() => setView("dashboard")} 
-        onLoadHistory={(data, periodeH) => {
-          setSoList(data);
-          setTanggalPeriode(periodeH);
-          setTanggalTtd(new Date().toISOString().slice(0, 10)); // Default TTD hari ini untuk riwayat
-          setView("dashboard");
-        }}
+      <TemplateEditor masterData={masterData} setMasterData={setMasterData} onBack={() => setView("dashboard")} 
+        onLoadHistory={(data, periodeH) => { setSoList(data); setTanggalPeriode(periodeH); setTanggalTtd(new Date().toISOString().slice(0, 10)); setView("dashboard"); }}
         onReExportHistory={(format, data, periodeH) => {
           const templateWithPeriode = { ...activeTemplate, tanggal_periode: periodeH };
           if (format === 'EXCEL') exportToExcel(data, templateWithPeriode, tanggalTtd);
@@ -344,182 +278,233 @@ export default function Home() {
   
   if (view === "update") return <UpdateView infoUpdate={updateInfo} isChecking={isChecking} statusDownload={statusDownload} progress={downloadProgress} onStartDownload={triggerDownload} onBack={() => setView("dashboard")} />;
 
-  const inputClass = "w-full bg-transparent border-none focus:ring-0 px-2 py-1 text-sm font-bold text-slate-800 outline-none";
+  const inputCellClass = "w-full h-full bg-transparent px-3 py-1.5 outline-none focus:bg-blue-900/30 focus:ring-1 focus:ring-blue-500 focus:z-10 relative transition-none placeholder:text-slate-600 text-slate-200 [color-scheme:dark] text-[13px]";
+  
+  const thClass = "px-3 py-2 font-semibold text-[11px] text-slate-400 border-b border-r border-slate-800 bg-slate-900 tracking-wider sticky top-0 z-10";
+  // Menghapus flex dari tdClass agar sifat asli tabel (table-cell) tidak rusak
+  const tdClass = "border-b border-r border-slate-800 p-0 relative align-middle";
+  const btnToolbarClass = "h-8 px-3 flex items-center gap-1.5 rounded text-[12px] font-medium border transition-colors focus:outline-none focus:ring-1 focus:ring-slate-500";
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8 relative">
+    <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-300 font-sans overflow-hidden selection:bg-blue-500/30">
       
       <Toast show={toast.show} msg={toast.msg} type={toast.type} />
-
       {isImportModalOpen && <ImportExcel onDataLoaded={handleDataImported} onClose={() => setIsImportModalOpen(false)} />}
+      <ConfirmModal isOpen={confirmModal.isOpen} title={confirmModal.title} message={confirmModal.message} type={confirmModal.type} confirmText="Hapus" onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
+      <PreviewExportModal isOpen={isPreviewModalOpen} dataList={getModifiedSoListForExport()} templateInfo={{ ...activeTemplate, tanggal_periode: tanggalPeriode }} onCancel={() => setIsPreviewModalOpen(false)} onExport={executeExport} />
 
-      <ConfirmModal 
-        isOpen={confirmModal.isOpen} 
-        title={confirmModal.title} 
-        message={confirmModal.message} 
-        type={confirmModal.type} 
-        confirmText="Hapus Sekarang"
-        onConfirm={confirmModal.onConfirm} 
-        onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} 
-      />
-
-      <PreviewExportModal 
-        isOpen={isPreviewModalOpen}
-        dataList={getModifiedSoListForExport()}
-        templateInfo={{ ...activeTemplate, tanggal_periode: tanggalPeriode }}
-        onCancel={() => setIsPreviewModalOpen(false)}
-        onExport={executeExport}
-      />
-
-      <div className="max-w-[1600px] mx-auto space-y-6">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex justify-between items-center relative">
-          <div className="absolute top-0 left-0 w-2 h-full bg-blue-600 rounded-l-3xl"></div>
-          <div className="flex items-center gap-5">
-            <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-xl shadow-blue-200"><FileSpreadsheet size={32} /></div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Rekapitulasi DO {activeTemplate.jenis_pupuk || ""}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                {isSyncing ? 
-                  <span className="text-[10px] text-blue-500 font-black uppercase animate-pulse flex items-center gap-1"><RefreshCw size={12} className="animate-spin"/> Syncing...</span> : 
-                  <span className="text-[10px] text-emerald-600 font-black uppercase flex items-center gap-1"><CheckCircle2 size={12}/> Database Active</span>
-                }
-              </div>
-            </div>
+      {/* HEADER: TITLE BAR */}
+      <header className="h-12 border-b border-slate-800 bg-slate-950 flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 p-1.5 rounded">
+            <FileSpreadsheet size={16} className="text-white" />
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={openUpdatePage} className={`relative bg-white border ${hasUpdateNotification ? 'border-orange-500 text-orange-600' : 'border-slate-200 text-slate-500'} px-6 py-2.5 rounded-2xl font-black text-sm hover:bg-slate-50 transition flex items-center gap-2`}>
-              Update v{APP_VERSION}
-              {hasUpdateNotification && <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] text-white animate-bounce border-2 border-white font-black">!</span>}
-            </button>
-            
-            <button onClick={() => setView("template")} className="bg-slate-100 px-6 py-2.5 rounded-2xl font-black text-sm text-slate-700 hover:bg-slate-200 transition border border-slate-200 shadow-sm">
-              Menu Data
-            </button>
-
-            <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-2xl">
-              <input type="date" className="bg-transparent text-sm font-black text-slate-900 outline-none" value={tanggalTtd} onChange={e => setTanggalTtd(e.target.value)} />
-            </div>
-            
-            <div className="relative flex gap-2">
-              <button onClick={() => setIsImportModalOpen(true)} className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-200 uppercase text-xs tracking-widest flex items-center gap-2 border-2 border-emerald-500">
-                <Upload size={16}/> Import
-              </button>
-              
-              <button onClick={() => setIsPreviewModalOpen(true)} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-200 uppercase text-xs tracking-widest flex items-center gap-2 border-2 border-blue-500">
-                <Eye size={18}/> Preview Laporan
-              </button>
-            </div>
+          <h1 className="text-sm font-semibold text-slate-100 tracking-wide">
+            Rekapitulasi DO {activeTemplate.jenis_pupuk ? `- ${activeTemplate.jenis_pupuk}` : ""}
+          </h1>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            {isSyncing ? <><RefreshCw size={12} className="animate-spin text-blue-400"/> Sinkronisasi...</> : <><CheckCircle2 size={12} className="text-emerald-500"/> DB Lokal Sinkron</>}
           </div>
+          <div className="w-px h-4 bg-slate-800"></div>
+          <button onClick={openUpdatePage} className={`flex items-center gap-1.5 hover:text-white transition-colors ${hasUpdateNotification ? 'text-orange-400 font-bold' : 'text-slate-400'}`}>
+            <DownloadCloud size={14} />
+            Versi {APP_VERSION}
+            {hasUpdateNotification && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse ml-1"></span>}
+          </button>
+        </div>
+      </header>
+
+      {/* TOOLBAR / RIBBON */}
+      <div className="h-14 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-4 shrink-0">
+        
+        {/* Left Toolbar (Data Actions) */}
+        <div className="flex items-center gap-2">
+          <button onClick={addSO} className={`${btnToolbarClass} bg-blue-600 border-blue-500 text-white hover:bg-blue-500`}>
+            <Plus size={14} /> Tambah DO
+          </button>
+          
+          <div className="w-px h-6 bg-slate-700 mx-1"></div>
+          
+          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded px-2 h-8">
+            <span className="text-[10px] uppercase text-slate-500 font-semibold">Periode</span>
+            <input type="date" className="bg-transparent text-xs text-slate-200 outline-none [color-scheme:dark]" value={tanggalPeriode} onChange={e => setTanggalPeriode(e.target.value)} />
+          </div>
+          
+          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded px-2 h-8">
+            <span className="text-[10px] uppercase text-slate-500 font-semibold">Tgl TTD</span>
+            <input type="date" className="bg-transparent text-xs text-slate-200 outline-none [color-scheme:dark]" value={tanggalTtd} onChange={e => setTanggalTtd(e.target.value)} />
+          </div>
+
+          {selectedIds.length > 0 && (
+            <>
+              <div className="w-px h-6 bg-slate-700 mx-1"></div>
+              <button onClick={deleteSelected} className={`${btnToolbarClass} bg-red-950/50 border-red-900/50 text-red-400 hover:bg-red-900/50`}>
+                <Trash2 size={14} /> Hapus ({selectedIds.length})
+              </button>
+            </>
+          )}
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-220px)] relative">
-          <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white z-20">
-            <div className="flex items-center gap-4">
-              <h2 className="font-black text-lg flex items-center gap-2 text-slate-800 uppercase tracking-tighter"><Box size={24} className="text-blue-600"/> Data Input Transaksi</h2>
-              {selectedIds.length > 0 && (
-                <button onClick={deleteSelected} className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all"><Trash2 size={14}/> Hapus Terpilih ({selectedIds.length})</button>
-              )}
-            </div>
-            
-            {/* Input Tanggal Periode Baru di sebelah Tambah DO Baru */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl shadow-inner">
-                <span className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-wider">Periode:</span>
-                <input type="date" className="bg-transparent text-sm font-black text-slate-800 outline-none" value={tanggalPeriode} onChange={e => setTanggalPeriode(e.target.value)} />
-              </div>
-              <button onClick={addSO} className="bg-slate-900 text-white px-8 py-2.5 rounded-xl flex items-center gap-2 text-sm font-black hover:bg-slate-800 transition shadow-lg"><Plus size={20}/> Tambah DO Baru</button>
-            </div>
-          </div>
-
-          <div className="overflow-auto flex-1 custom-scrollbar pb-36">
-            <table className="w-full min-w-[1500px] text-sm text-left border-collapse table-fixed">
-              <thead className="text-[11px] text-slate-900 uppercase bg-slate-50 sticky top-0 z-30 border-b border-slate-300 font-black">
-                <tr>
-                  <th className="w-12 text-center border-r border-slate-300"><button onClick={toggleSelectAll} className="p-1.5">{selectedIds.length > 0 && selectedIds.length === (soList.length + soList.reduce((a,b)=>a+b.penyaluranList.length, 0)) ? <CheckSquare size={18}/> : <Square size={18}/>}</button></th>
-                  <th className="w-14 text-center border-r border-slate-300 py-4">No</th>
-                  <th className="w-40 px-3 border-r border-slate-200">Tanggal SO</th>
-                  <th className="w-56 px-3 border-r border-slate-200 text-blue-800">NO SO/TGL SALUR</th>
-                  <th className="w-64 px-3 border-r border-slate-200">Pengecer</th>
-                  <th className="w-44 px-3 border-r border-slate-200">Kecamatan</th>
-                  <th className="w-32 px-3 border-r border-slate-200 text-right">Stok Awal</th>
-                  <th className="w-32 px-3 border-r border-slate-200 text-right text-emerald-800">Pengadaan</th>
-                  <th className="w-32 px-3 border-r border-slate-200 text-right text-orange-800">Penyaluran</th>
-                  <th className="w-36 px-3 text-right text-blue-900 bg-blue-50/50">Stok Akhir</th>
-                  <th className="w-24 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {soList.map((so, idx) => {
-                  let runningCur = (so.stokAwal || 0) + (so.pengadaan || 0);
-                  const isSoSelected = selectedIds.includes(so.id);
-                  return (
-                    <React.Fragment key={so.id}>
-                      <tr className={`group transition-colors border-b-2 border-slate-100 ${isSoSelected ? 'bg-blue-50/50' : 'bg-white'}`}>
-                        <td className="text-center border-r border-slate-300"><button onClick={() => toggleSelect(so.id)}>{isSoSelected ? <CheckSquare size={18}/> : <Square size={18}/>}</button></td>
-                        <td className="text-center font-black text-slate-900 border-r border-slate-300 bg-slate-50/50 text-base">{idx + 1}</td>
-                        <td className="border-r border-slate-100"><input type="date" ref={el => { if (el) inputRefs.current[so.id] = el; }} className={inputClass} value={so.tanggalSO} onChange={e => updateSO(so.id, "tanggalSO", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
-                        
-                        <td className="border-r border-slate-100 bg-blue-50/20">
-                          <div className="flex items-center px-2">
-                            {activeTemplate.no_so_prefix && (
-                              <span className="text-blue-900/40 font-black text-[13px] mr-0.5 tracking-wider select-none">
-                                {activeTemplate.no_so_prefix}
-                              </span>
-                            )}
-                            <input 
-                              type="text" 
-                              className={`${inputClass} text-blue-800 uppercase px-0 tracking-wider`} 
-                              placeholder="NO SO..." 
-                              value={so.noSO} 
-                              onChange={e => updateSO(so.id, "noSO", e.target.value)} 
-                              onKeyDown={(e) => handleKeyDown(e, so.id)} 
-                            />
-                          </div>
-                        </td>
-
-                        <td className="border-r border-slate-100 bg-slate-50"></td>
-                        <td className="border-r border-slate-100"><input type="text" className={inputClass} placeholder="Kecamatan..." value={so.kecamatan} onChange={e => updateSO(so.id, "kecamatan", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
-                        <td className="border-r border-slate-100"><input type="number" step="any" className={`${inputClass} text-right`} value={so.stokAwal || ""} onChange={e => updateSO(so.id, "stokAwal", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
-                        <td className="border-r border-slate-100"><input type="number" step="any" className={`${inputClass} text-right text-emerald-700`} value={so.pengadaan || ""} onChange={e => updateSO(so.id, "pengadaan", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
-                        <td className="border-r border-slate-100 bg-slate-50"></td>
-                        <td className="px-3 font-black text-right text-blue-900 bg-blue-50/50 tabular-nums">{formatDesimal(runningCur)}</td>
-                        <td className="px-2 flex justify-center gap-1 opacity-0 group-hover:opacity-100"><button onClick={() => addPenyaluran(so.id)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white"><Plus size={14}/></button><button onClick={() => removeSO(so.id)} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white"><Trash2 size={14}/></button></td>
-                      </tr>
-                      {so.penyaluranList.map((det) => {
-                        runningCur -= (det.penyaluran || 0);
-                        const isDetSelected = selectedIds.includes(det.id);
-                        return (
-                          <tr key={det.id} className={`transition-colors ${isDetSelected ? 'bg-blue-50/30' : 'bg-slate-50/30 hover:bg-slate-100'}`}>
-                            <td className="text-center border-r border-slate-300"><button onClick={() => toggleSelect(det.id)}>{isDetSelected ? <CheckSquare size={18}/> : <Square size={18}/>}</button></td>
-                            <td className="border-r border-slate-300 bg-slate-50/30"></td><td className="border-r border-slate-100"></td>
-                            <td className="border-r border-slate-100 flex items-center px-1">
-                                <CornerDownRight size={14} className="text-slate-300 mr-1 shrink-0" />
-                                <input type="date" ref={el => { if (el) inputRefs.current[det.id] = el; }} className={inputClass + " bg-transparent"} value={det.tglSalur} onChange={e => updatePenyaluran(so.id, det.id, "tglSalur", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} />
-                            </td>
-                            <td className="border-r border-slate-100"><input type="text" className={inputClass} placeholder="Pengecer..." value={det.pengecer} onChange={e => updatePenyaluran(so.id, det.id, "pengecer", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
-                            <td colSpan={3} className="border-r border-slate-100"></td>
-                            <td className="border-r border-slate-100"><input type="number" step="any" className={`${inputClass} text-right text-orange-700`} value={det.penyaluran || ""} onChange={e => updatePenyaluran(so.id, det.id, "penyaluran", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} /></td>
-                            <td className="px-3 text-right font-bold text-slate-500 tabular-nums">{formatDesimal(runningCur)}</td>
-                            <td className="px-2 flex justify-center"><button onClick={() => removePenyaluran(so.id, det.id)} className="p-1 text-slate-300 hover:text-red-500"><X size={14}/></button></td>
-                          </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-8 z-20 flex justify-between items-center shadow-2xl">
-             <div className="flex gap-10">
-                <div className="bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100"><p className="text-[10px] text-slate-400 font-black uppercase mb-1">Total DO</p><p className="text-2xl font-black text-slate-800 leading-none">{soList.length}</p></div>
-                <div className="bg-emerald-50 px-6 py-3 rounded-2xl border border-emerald-100"><p className="text-[10px] text-emerald-500 font-black uppercase mb-1">Total Pengadaan</p><p className="text-2xl font-black text-emerald-700 leading-none">{formatDesimal(soList.reduce((acc, so) => acc + (so.pengadaan || 0), 0))}</p></div>
-             </div>
-             <div className="text-right border-l border-slate-100 pl-16"><p className="text-[10px] text-slate-400 font-black uppercase mb-1">Total Penyaluran</p><p className="text-5xl font-black text-orange-700 leading-none tracking-tighter">{formatDesimal(soList.reduce((acc, so) => acc + so.penyaluranList.reduce((a, b) => a + (b.penyaluran || 0), 0), 0))}</p></div>
-          </div>
+        {/* Right Toolbar (System Actions) */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setView("template")} className={`${btnToolbarClass} bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white`}>
+            <Settings size={14} /> Master Data
+          </button>
+          <div className="w-px h-6 bg-slate-700 mx-1"></div>
+          <button onClick={() => setIsImportModalOpen(true)} className={`${btnToolbarClass} bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-emerald-400`}>
+            <Upload size={14} /> Import
+          </button>
+          <button onClick={() => setIsPreviewModalOpen(true)} className={`${btnToolbarClass} bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-blue-400`}>
+            <Eye size={14} /> Preview Laporan
+          </button>
         </div>
       </div>
+
+      {/* WORKSPACE (DATA GRID) */}
+      <main className="flex-1 overflow-auto bg-slate-950 custom-scrollbar relative">
+        <table className="w-full min-w-[1500px] text-left border-collapse table-fixed">
+          <thead>
+            <tr>
+              <th className={`${thClass} w-10 text-center`}><button onClick={toggleSelectAll} className="hover:text-blue-400 transition-colors">{selectedIds.length > 0 && selectedIds.length === (soList.length + soList.reduce((a,b)=>a+b.penyaluranList.length, 0)) ? <CheckSquare size={14}/> : <Square size={14}/>}</button></th>
+              <th className={`${thClass} w-12 text-center`}>No</th>
+              
+              <th className={`${thClass} w-36`}>Tanggal SO</th>
+              <th className={`${thClass} w-56 text-blue-400`}>No SO / Salur</th>
+              <th className={`${thClass} w-64`}>Pengecer</th>
+              <th className={`${thClass} w-40`}>Kecamatan</th>
+              
+              <th className={`${thClass} w-32 text-right`}>Stok Awal</th>
+              <th className={`${thClass} w-32 text-right text-emerald-500`}>Pengadaan</th>
+              <th className={`${thClass} w-32 text-right text-orange-500`}>Penyaluran</th>
+              <th className={`${thClass} w-32 text-right text-blue-400 bg-slate-900`}>Stok Akhir</th>
+              
+              <th className={`${thClass} w-20 text-center`}>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {soList.map((so, idx) => {
+              let runningCur = (so.stokAwal || 0) + (so.pengadaan || 0);
+              const isSoSelected = selectedIds.includes(so.id);
+              return (
+                <React.Fragment key={so.id}>
+                  {/* Induk Row (Sales Order) */}
+                  <tr className={`group ${isSoSelected ? 'bg-blue-900/20' : 'bg-slate-950 hover:bg-slate-900'}`}>
+                    <td className={`${tdClass} text-center`}><button onClick={() => toggleSelect(so.id)} className="text-slate-500 hover:text-blue-400 mt-1.5">{isSoSelected ? <CheckSquare size={14}/> : <Square size={14}/>}</button></td>
+                    <td className={`${tdClass} text-center text-[11px] font-medium text-slate-500 bg-slate-900/50`}>{idx + 1}</td>
+                    
+                    <td className={tdClass}>
+                      <input type="date" ref={el => { if (el) inputRefs.current[so.id] = el; }} className={inputCellClass} value={so.tanggalSO} onChange={e => updateSO(so.id, "tanggalSO", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} />
+                    </td>
+                    
+                    {/* Perbaikan: Menggunakan <div> pembungkus flex di dalam <td> */}
+                    <td className={`${tdClass} bg-slate-900/30`}>
+                      <div className="flex items-center w-full h-full focus-within:bg-blue-900/30 focus-within:ring-1 focus-within:ring-blue-500 relative">
+                        {activeTemplate.no_so_prefix && (
+                          <span className="text-slate-500 font-semibold text-[11px] ml-3 tracking-widest select-none absolute left-0 z-0">
+                            {activeTemplate.no_so_prefix}
+                          </span>
+                        )}
+                        <input type="text" className={`${inputCellClass} text-blue-300 font-medium uppercase tracking-wider bg-transparent relative z-10 ${activeTemplate.no_so_prefix ? 'pl-12' : 'pl-3'} focus:bg-transparent focus:ring-0`} placeholder="NO SO..." value={so.noSO} onChange={e => updateSO(so.id, "noSO", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} />
+                      </div>
+                    </td>
+
+                    <td className={`${tdClass} bg-slate-900/50`}></td>
+                    
+                    <td className={tdClass}>
+                      <input type="text" className={inputCellClass} placeholder="Kecamatan..." value={so.kecamatan} onChange={e => updateSO(so.id, "kecamatan", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} />
+                    </td>
+                    
+                    <td className={tdClass}>
+                      <input type="number" step="any" className={`${inputCellClass} text-right font-medium text-slate-300`} value={so.stokAwal || ""} onChange={e => updateSO(so.id, "stokAwal", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} placeholder="0" />
+                    </td>
+                    
+                    <td className={tdClass}>
+                      <input type="number" step="any" className={`${inputCellClass} text-right font-medium text-emerald-400`} value={so.pengadaan || ""} onChange={e => updateSO(so.id, "pengadaan", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} placeholder="0" />
+                    </td>
+                    
+                    <td className={`${tdClass} bg-slate-900/50`}></td>
+                    
+                    <td className={`${tdClass} text-right px-3 text-[13px] font-medium text-blue-400 bg-slate-900 tabular-nums`}>
+                      {formatDesimal(runningCur)}
+                    </td>
+                    
+                    <td className={`${tdClass} text-center`}>
+                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pt-1">
+                        <button onClick={() => addPenyaluran(so.id)} className="p-1.5 text-blue-400 hover:bg-blue-900/50 rounded" title="Tambah Penyaluran"><Plus size={14}/></button>
+                        <button onClick={() => removeSO(so.id)} className="p-1.5 text-red-500 hover:bg-red-900/30 rounded" title="Hapus DO"><Trash2 size={14}/></button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Anak Row (Penyaluran) */}
+                  {so.penyaluranList.map((det) => {
+                    runningCur -= (det.penyaluran || 0);
+                    const isDetSelected = selectedIds.includes(det.id);
+                    return (
+                      <tr key={det.id} className={`group ${isDetSelected ? 'bg-blue-900/30' : 'bg-[#0b0e14] hover:bg-slate-900'}`}>
+                        <td className={`${tdClass} text-center`}><button onClick={() => toggleSelect(det.id)} className="text-slate-600 hover:text-blue-400 mt-1.5">{isDetSelected ? <CheckSquare size={14}/> : <Square size={14}/>}</button></td>
+                        <td colSpan={2} className={`${tdClass} bg-slate-900/20`}></td>
+                        
+                        {/* Perbaikan: Menggunakan <div> pembungkus flex di dalam <td> */}
+                        <td className={tdClass}>
+                          <div className="flex items-center w-full h-full pl-2 focus-within:bg-blue-900/30 focus-within:ring-1 focus-within:ring-blue-500">
+                            <CornerDownRight size={14} className="text-slate-600 mr-1 shrink-0" />
+                            <input type="date" ref={el => { if (el) inputRefs.current[det.id] = el; }} className={`${inputCellClass} focus:ring-0 focus:bg-transparent`} value={det.tglSalur} onChange={e => updatePenyaluran(so.id, det.id, "tglSalur", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} />
+                          </div>
+                        </td>
+                        
+                        <td className={tdClass}>
+                          <input type="text" className={inputCellClass} placeholder="Nama Pengecer..." value={det.pengecer} onChange={e => updatePenyaluran(so.id, det.id, "pengecer", e.target.value)} onKeyDown={(e) => handleKeyDown(e, so.id)} />
+                        </td>
+                        
+                        <td colSpan={3} className={`${tdClass} bg-slate-900/20`}></td>
+                        
+                        <td className={tdClass}>
+                          <input type="number" step="any" className={`${inputCellClass} text-right font-medium text-orange-400`} value={det.penyaluran || ""} onChange={e => updatePenyaluran(so.id, det.id, "penyaluran", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, so.id)} placeholder="0" />
+                        </td>
+                        
+                        <td className={`${tdClass} text-right px-3 text-[13px] text-slate-500 tabular-nums`}>
+                          {formatDesimal(runningCur)}
+                        </td>
+                        
+                        <td className={`${tdClass} text-center`}>
+                          <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pt-1">
+                            <button onClick={() => removePenyaluran(so.id, det.id)} className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-900/20 rounded"><X size={14}/></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </main>
+
+      {/* STATUS BAR (FOOTER) */}
+      <footer className="h-10 border-t border-slate-800 bg-slate-950 flex items-center justify-between px-4 shrink-0 text-[11px] font-medium text-slate-400 select-none z-20">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span>Total Baris SO:</span>
+            <span className="text-slate-200 font-bold">{soList.length}</span>
+          </div>
+          <div className="w-px h-4 bg-slate-800"></div>
+          <div className="flex items-center gap-2">
+            <span>Total Pengadaan:</span>
+            <span className="text-emerald-400 font-bold">{formatDesimal(soList.reduce((acc, so) => acc + (so.pengadaan || 0), 0))}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span>Total Penyaluran Keluar:</span>
+          <span className="text-orange-400 font-bold text-xs bg-orange-950/30 border border-orange-900/50 px-2 py-0.5 rounded">
+            {formatDesimal(soList.reduce((acc, so) => acc + so.penyaluranList.reduce((a, b) => a + (b.penyaluran || 0), 0), 0))}
+          </span>
+        </div>
+      </footer>
 
     </div>
   );
