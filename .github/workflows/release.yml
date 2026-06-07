@@ -55,6 +55,6 @@ jobs:
           # Tambahkan ini agar tidak error jika rilis sudah ada
           append_body: true
           # Atau gunakan ini jika ingin benar-benar menimpa rilis lama
-          # prerelease: false 
+          prerelease: false 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
