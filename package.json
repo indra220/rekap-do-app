@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "Aplikasi Rekapitulasi Delivery Order (DO) Pupuk",
   "main": "main.js",
   "scripts": {
