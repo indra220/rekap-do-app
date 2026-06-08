@@ -1,6 +1,6 @@
 {
   "name": "rekap-do-app",
-  "version": "1.0.43",
+  "version": "1.0.46",
   "description": "Aplikasi Rekapitulasi Delivery Order (DO) Pupuk",
   "main": "main.js",
   "scripts": {
@@ -62,6 +62,7 @@
   "build": {
     "appId": "com.megaagrosanjaya.rekapdo",
     "productName": "Aplikasi Rekap DO",
+    "artifactName": "rekap-do-setup-${version}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -76,7 +77,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Aplikasi Rekap DO",
-      "artifactName": "${productName}-Setup-${version}.${ext}",
       "uninstallDisplayName": "Uninstall Aplikasi Rekap DO",
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
