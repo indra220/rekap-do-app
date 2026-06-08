@@ -8,126 +8,91 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 export default function Profil({ masterData, viewMode, setViewMode, formData, setFormData, triggerDelete }: any) {
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const handleCreate = (jenis: string) => {
-    const newData: any = { 
-      id: generateId(), 
-      nama_preset: `Template Baru (${jenis})`, 
-      jenis_pupuk: jenis,
-      list: [] 
-    };
-    setFormData(newData);
-    setViewMode("form");
-    setShowDropdown(false);
-  };
-
   if (viewMode === "list") {
     return (
-      <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="flex justify-between items-center mb-8 border-b border-slate-800 pb-4 relative">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
           <div>
-            <h3 className="text-xl font-bold text-white">Data Profil & Metadata</h3>
-            <p className="text-sm text-slate-400 font-medium mt-1">Kelola data template yang tersimpan di database.</p>
+            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Data Profil & Metadata</h3>
           </div>
-          
           <div className="relative">
-            <button 
-              onClick={() => setShowDropdown(!showDropdown)} 
-              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase flex items-center gap-2 transition shadow-lg shadow-blue-900/20"
-            >
-              <Plus size={16} /> Buat Data Baru <ChevronDown size={14} className={`transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-52 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl shadow-black z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <button onClick={() => handleCreate("UREA")} className="w-full text-left px-4 py-3.5 text-xs uppercase tracking-widest font-bold text-slate-300 hover:bg-blue-900/30 hover:text-blue-400 border-b border-slate-800 transition flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500"></span> Template UREA
-                </button>
-                <button onClick={() => handleCreate("PHONSKA")} className="w-full text-left px-4 py-3.5 text-xs uppercase tracking-widest font-bold text-slate-300 hover:bg-orange-900/30 hover:text-orange-400 transition flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-orange-500"></span> Template PHONSKA
-                </button>
-              </div>
-            )}
+              <button onClick={() => setShowDropdown(!showDropdown)} className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 text-xs font-bold flex items-center gap-2 border border-slate-700 rounded transition">
+                <Plus size={14} /> BUAT DATA BARU <ChevronDown size={14} />
+              </button>
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded shadow-xl z-20 overflow-hidden">
+                  <button onClick={() => { setFormData({ id: generateId(), nama_preset: "Template UREA", jenis_pupuk: "UREA" }); setViewMode("form"); setShowDropdown(false); }} className="w-full text-left px-4 py-3 text-xs text-slate-300 hover:bg-slate-800 border-b border-slate-800 font-bold transition">Template UREA</button>
+                  <button onClick={() => { setFormData({ id: generateId(), nama_preset: "Template PHONSKA", jenis_pupuk: "PHONSKA" }); setViewMode("form"); setShowDropdown(false); }} className="w-full text-left px-4 py-3 text-xs text-slate-300 hover:bg-slate-800 font-bold transition">Template PHONSKA</button>
+                </div>
+              )}
           </div>
         </div>
 
-        <div className="space-y-3">
-          {masterData.profiles?.map((item: any, idx: number) => (
-            <div key={item.id} className="bg-slate-950/50 hover:bg-slate-800 p-5 rounded-2xl border border-slate-800 hover:border-blue-500/50 flex justify-between items-center transition shadow-sm group">
-              <div className="flex items-center gap-4">
-                <span className="bg-slate-800 text-slate-400 font-bold px-3 py-1 rounded-lg text-xs border border-slate-700">{idx + 1}</span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-slate-200 text-base">{item.nama_preset}</p>
-                    {item.jenis_pupuk === "UREA" && <span className="bg-blue-900/30 text-blue-400 text-[10px] font-bold px-2 py-0.5 rounded-md border border-blue-900/50">UREA</span>}
-                    {item.jenis_pupuk === "PHONSKA" && <span className="bg-orange-900/30 text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-md border border-orange-900/50">PHONSKA</span>}
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">ID Database: {item.id}</p>
-                </div>
+        <div className="space-y-2">
+          {masterData.profiles?.map((item: any) => (
+            <div key={item.id} className="bg-slate-900 border border-slate-800 p-4 rounded flex justify-between items-center group">
+              <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-slate-300">{item.nama_preset}</span>
+                  {item.jenis_pupuk && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">{item.jenis_pupuk}</span>}
               </div>
-              <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                <button onClick={() => { setFormData(item); setViewMode("form"); setShowDropdown(false); }} className="bg-blue-900/30 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 border border-blue-900/50 hover:border-transparent"><Edit size={14}/> Edit Template</button>
-                <button onClick={() => triggerDelete(item.id)} className="bg-red-900/20 text-red-400 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 border border-red-900/30 hover:border-transparent"><Trash size={14}/> Hapus</button>
+              <div className="flex gap-2">
+                <button onClick={() => { setFormData(item); setViewMode("form"); }} className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded transition"><Edit size={16}/></button>
+                <button onClick={() => triggerDelete(item.id)} className="p-1.5 text-red-500 hover:bg-red-900/20 rounded transition"><Trash size={16}/></button>
               </div>
             </div>
           ))}
         </div>
-        
         {showDropdown && <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)}></div>}
       </div>
     );
   }
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-3xl mx-auto">
-      <div className="mb-8 border-b border-slate-800 pb-4">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2"><Edit size={24} className={formData.jenis_pupuk === 'PHONSKA' ? 'text-orange-400' : 'text-blue-400'}/> Editor Data Profil</h3>
-      </div>
-      
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl mb-8 shadow-sm">
-        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Nama Template / Preset (Wajib)</label>
-        <input type="text" className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-900/50 text-white rounded-xl px-4 py-3 font-semibold text-lg outline-none transition-all placeholder:text-slate-600" 
-          value={formData.nama_preset || ""} onChange={e => setFormData({...formData, nama_preset: e.target.value})} placeholder="Contoh: Template Phonska 2026"/>
-      </div>
-
+    <div className="max-w-2xl">
+      <h3 className="text-sm font-bold text-slate-200 mb-6 uppercase border-b border-slate-800 pb-2">Editor Profil</h3>
       <div className="grid grid-cols-2 gap-x-6">
+        <div className="col-span-2">
+            <InputRow label="Nama Template / Preset (Wajib)" value={formData.nama_preset} onChange={(e:any) => setFormData({...formData, nama_preset: e.target.value})} placeholder="Contoh: Template Utama" />
+        </div>
+        
         {formData.jenis_pupuk === 'PHONSKA' ? (
           <>
             <div className="col-span-2">
-              <InputRow label="Judul Laporan Utama" value={formData.phonska_a1} onChange={(e: any) => setFormData({...formData, phonska_a1: e.target.value})} placeholder="Contoh: LAPORAN ALUR DO PT MEGA AGRO SANJAYA" />
+              <InputRow label="Judul Laporan Utama" value={formData.phonska_a1} onChange={(e: any) => setFormData({...formData, phonska_a1: e.target.value})} placeholder="Contoh: LAPORAN ALUR DO" />
             </div>
             <div className="col-span-2">
-              <InputRow label="Keterangan Wilayah" value={formData.phonska_a2} onChange={(e: any) => setFormData({...formData, phonska_a2: e.target.value})} placeholder="Contoh: KAB.TASIKMALAYA PROVINSI JAWA BARAT" />
+              <InputRow label="Keterangan Wilayah" value={formData.phonska_a2} onChange={(e: any) => setFormData({...formData, phonska_a2: e.target.value})} placeholder="Contoh: KAB.TASIKMALAYA" />
             </div>
             <div className="col-span-2">
               <InputRow label="Format Teks Periode" value={formData.phonska_a3} onChange={(e: any) => setFormData({...formData, phonska_a3: e.target.value})} placeholder="Contoh: PERIODE TAHUN" />
             </div>
-            <div className="col-span-2 mb-2">
-              <InputRow label="Keterangan Sistem Penebusan" value={formData.phonska_a4} onChange={(e: any) => setFormData({...formData, phonska_a4: e.target.value})} placeholder="Contoh: SIP3-Sistem informasi Penebusan & Penyaluran Pupuk Bersubsidi PT Petrokimia Gresik" />
+            <div className="col-span-2">
+              <InputRow label="Keterangan Sistem Penebusan" value={formData.phonska_a4} onChange={(e: any) => setFormData({...formData, phonska_a4: e.target.value})} placeholder="Contoh: SIP3-Sistem informasi..." />
             </div>
           </>
         ) : (
           <>
-            <InputRow label="Code Laporan" value={formData.code} onChange={(e: any) => setFormData({...formData, code: e.target.value})} placeholder="Contoh: F-5 B" />
-            <InputRow label="Provinsi" value={formData.provinsi} onChange={(e: any) => setFormData({...formData, provinsi: e.target.value})} placeholder="Contoh: Jawa Barat" />
-            <InputRow label="Nama Perusahaan" value={formData.nama_perusahaan} onChange={(e: any) => setFormData({...formData, nama_perusahaan: e.target.value})} placeholder="Contoh: PT Mega Agro Sanjaya" />
-            <InputRow label="Alamat Perusahaan" value={formData.alamat_perusahaan} onChange={(e: any) => setFormData({...formData, alamat_perusahaan: e.target.value})} placeholder="Contoh: Jl. Ir. H. Juanda Kel. Argasari..." />
-            <InputRow label="Telp / Fax" value={formData.telp} onChange={(e: any) => setFormData({...formData, telp: e.target.value})} placeholder="Contoh: 081320599599" />
-            <InputRow label="Alamat E-mail" value={formData.email} onChange={(e: any) => setFormData({...formData, email: e.target.value})} placeholder="Contoh: ptmegaagrosanjaya@gmail.com" />
-            <InputRow label="Kabupaten" value={formData.kabupaten} onChange={(e: any) => setFormData({...formData, kabupaten: e.target.value})} placeholder="Contoh: Tasikmalaya" />
+            <InputRow label="Code Laporan" value={formData.code} onChange={(e:any) => setFormData({...formData, code: e.target.value})} placeholder="Contoh: F-5 B" />
+            <InputRow label="Provinsi" value={formData.provinsi} onChange={(e:any) => setFormData({...formData, provinsi: e.target.value})} placeholder="Contoh: Jawa Barat" />
+            <div className="col-span-2">
+                <InputRow label="Nama Perusahaan" value={formData.nama_perusahaan} onChange={(e:any) => setFormData({...formData, nama_perusahaan: e.target.value})} placeholder="Contoh: PT Mega Agro Sanjaya" />
+            </div>
+            <div className="col-span-2">
+                <InputRow label="Alamat Perusahaan" value={formData.alamat_perusahaan} onChange={(e:any) => setFormData({...formData, alamat_perusahaan: e.target.value})} placeholder="Jl. Raya..." />
+            </div>
+            <InputRow label="Telp / Fax" value={formData.telp} onChange={(e:any) => setFormData({...formData, telp: e.target.value})} placeholder="08123..." />
+            <InputRow label="Email" value={formData.email} onChange={(e:any) => setFormData({...formData, email: e.target.value})} placeholder="email@domain.com" />
+            <InputRow label="Kabupaten" value={formData.kabupaten} onChange={(e:any) => setFormData({...formData, kabupaten: e.target.value})} placeholder="Tasikmalaya" />
           </>
         )}
 
         <div className="flex flex-col mb-4">
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Jenis Pupuk (Fixed)</label>
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Jenis Pupuk (Fixed)</label>
           <input 
             type="text" 
             readOnly 
             disabled
-            className={`w-full border rounded-xl px-4 py-3 font-semibold text-sm outline-none cursor-not-allowed select-none ${
-              formData.jenis_pupuk === 'UREA' ? 'bg-blue-950/20 border-blue-900/30 text-blue-400' : 
-              formData.jenis_pupuk === 'PHONSKA' ? 'bg-orange-950/20 border-orange-900/30 text-orange-400' : 
-              'bg-slate-900 border-slate-800 text-slate-500'
-            }`}
+            className="w-full bg-slate-900 border border-slate-800 text-slate-500 rounded px-3 py-2 text-sm outline-none cursor-not-allowed select-none"
             value={formData.jenis_pupuk || ""}
           />
         </div>

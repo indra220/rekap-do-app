@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useState } from "react";
-import { ArrowLeft, Save, CheckSquare, Building2, Send, PenTool, Copy, X, Database, Archive, Store } from "lucide-react"; 
+import { ArrowLeft, Save, CheckSquare, Building2, Send, PenTool, Copy, Database, Archive, Store } from "lucide-react"; 
 import { SOData } from "@/types";
-
-// IMPORT KOMPONEN GLOBAL & TAB MODULAR
 import Toast from "./Toast";
 import ConfirmModal from "./ConfirmModal";
 import PilihTemplate from "./tabs/PilihTemplate";
@@ -15,17 +13,9 @@ import Tembusan from "./tabs/Tembusan";
 import Kios from "./tabs/Kios";
 import Riwayat from "./tabs/Riwayat";
 
-interface TemplateEditorProps {
-  masterData: any;
-  setMasterData: (data: any) => void;
-  onBack: () => void;
-  onLoadHistory: (data: SOData[], periode: string) => void;
-  onReExportHistory: (format: 'EXCEL'|'PDF', data: SOData[], periode: string) => void;
-}
-
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export default function TemplateEditor({ masterData, setMasterData, onBack, onLoadHistory, onReExportHistory }: TemplateEditorProps) {
+export default function TemplateEditor({ masterData, setMasterData, onBack, onLoadHistory, onReExportHistory }: any) {
   const [menu, setMenu] = useState("pilih"); 
   const [viewMode, setViewMode] = useState("list"); 
   const [formData, setFormData] = useState<any>({});
@@ -42,13 +32,13 @@ export default function TemplateEditor({ masterData, setMasterData, onBack, onLo
   }>({ isOpen: false, title: "", message: "", type: 'danger', onConfirm: () => {} });
 
   const menus = [
-    { id: "pilih", label: "Pilih Template Aktif", icon: <CheckSquare size={18} /> },
-    { id: "profil", label: "Data Profil & Metadata", icon: <Building2 size={18} /> },
-    { id: "tujuan", label: "Data Tujuan Laporan", icon: <Send size={18} /> },
-    { id: "ttd", label: "Data Otorisasi (TTD)", icon: <PenTool size={18} /> },
-    { id: "tembusan", label: "Data Daftar Tembusan", icon: <Copy size={18} /> },
-    { id: "kios", label: "Data Kios", icon: <Store size={18} /> },
-    { id: "riwayat", label: "Riwayat Export", icon: <Archive size={18} /> },
+    { id: "pilih", label: "Pilih Template Aktif", icon: <CheckSquare size={16} /> },
+    { id: "profil", label: "Data Profil & Metadata", icon: <Building2 size={16} /> },
+    { id: "tujuan", label: "Data Tujuan Laporan", icon: <Send size={16} /> },
+    { id: "ttd", label: "Data Otorisasi (TTD)", icon: <PenTool size={16} /> },
+    { id: "tembusan", label: "Data Daftar Tembusan", icon: <Copy size={16} /> },
+    { id: "kios", label: "Data Kios", icon: <Store size={16} /> },
+    { id: "riwayat", label: "Riwayat Export", icon: <Archive size={16} /> },
   ];
 
   const getListKey = (m: string) => m === 'profil' ? 'profiles' : m === 'tujuan' ? 'tujuans' : m === 'ttd' ? 'ttds' : m === 'kios' ? 'kiosList' : 'tembusans';
@@ -120,7 +110,7 @@ export default function TemplateEditor({ masterData, setMasterData, onBack, onLo
     setConfirmModal({
       isOpen: true,
       title: "Hapus Riwayat Export?",
-      message: "Seluruh data snapshot (tabel) yang tersimpan dalam riwayat ini akan dihapus permanen.",
+      message: "Seluruh data snapshot yang tersimpan dalam riwayat ini akan dihapus permanen.",
       type: 'danger',
       onConfirm: () => {
         const newHistory = (masterData.exportHistory || []).filter((h: any) => h.id !== id);
@@ -137,7 +127,7 @@ export default function TemplateEditor({ masterData, setMasterData, onBack, onLo
     setConfirmModal({
       isOpen: true,
       title: "Edit / Restore Data?",
-      message: "Peringatan: Data yang sedang ada di Dashboard saat ini akan ditimpa dengan data dari riwayat ini. Lanjutkan?",
+      message: "Peringatan: Data di Dashboard saat ini akan ditimpa dengan riwayat ini. Lanjutkan?",
       type: 'warning',
       onConfirm: () => {
         onLoadHistory(data, periode);
@@ -150,11 +140,11 @@ export default function TemplateEditor({ masterData, setMasterData, onBack, onLo
     const updatedMasterData = {...masterData, active: {...masterData.active, [key]: value}};
     setMasterData(updatedMasterData);
     forceSaveToDB(updatedMasterData);
-    showToast("Template aktif berhasil diubah dan diterapkan.", "success");
+    showToast("Template aktif berhasil diterapkan.", "success");
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-8 flex flex-col items-center relative text-slate-200">
+    <div className="h-screen w-screen bg-slate-950 p-4 flex flex-col overflow-hidden text-slate-200 font-sans">
       
       <Toast show={toast.show} msg={toast.msg} type={toast.type} />
 
@@ -167,49 +157,43 @@ export default function TemplateEditor({ masterData, setMasterData, onBack, onLo
         onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} 
       />
 
-      <div className="max-w-[1200px] w-full bg-slate-900 border border-slate-800 shadow-2xl shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-[95vh]">
-        <div className="bg-slate-950 px-8 py-5 flex justify-between items-center text-white border-b border-slate-800">
+      <div className="flex-1 bg-slate-900 border border-slate-800 rounded overflow-hidden flex flex-col shadow-2xl">
+        {/* Header Ribbon */}
+        <div className="h-14 bg-slate-950 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-4">
-            {viewMode === 'list' ? (
-              <button onClick={onBack} className="hover:bg-slate-800 p-2 rounded-xl transition bg-slate-900 border border-slate-800 text-slate-300">
-                <ArrowLeft size={24}/>
-              </button>
-            ) : (
-              <button onClick={() => setViewMode('list')} className="hover:bg-red-900/30 text-red-400 p-2 rounded-xl transition flex gap-2 font-bold text-sm items-center border border-transparent hover:border-red-900/50">
-                <X size={20}/> Batal Edit
-              </button>
-            )}
-            <div className="flex items-center gap-2 bg-blue-900/30 border border-blue-900/50 px-4 py-2 rounded-lg text-blue-400">
-              <Database size={18} />
-              <h2 className="font-black text-sm tracking-widest uppercase">Master Menu Data</h2>
-            </div>
+             <button onClick={onBack} className="p-2 hover:bg-slate-800 rounded text-slate-400 transition"><ArrowLeft size={18}/></button>
+             <h2 className="font-bold text-sm tracking-widest uppercase text-slate-200">Master Data Configuration</h2>
           </div>
-          
-          {viewMode === 'form' && (
-            <button onClick={handleSaveForm} className="bg-emerald-600 hover:bg-emerald-500 px-8 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 transition shadow-lg shadow-emerald-900/50">
-              <Save size={18}/> Simpan Ke Database
-            </button>
+          {viewMode === 'form' ? (
+            <div className="flex gap-2">
+                <button onClick={() => setViewMode("list")} className="px-4 py-1.5 rounded text-xs font-bold text-slate-400 hover:text-white border border-transparent hover:border-slate-700">
+                  BATAL
+                </button>
+                <button onClick={handleSaveForm} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded text-xs font-bold flex items-center gap-2">
+                  <Save size={14}/> SIMPAN DATA
+                </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1 bg-slate-900 border border-slate-800 rounded text-[11px] text-slate-400 font-bold tracking-wider">
+                <Database size={12}/> DATA TERSIMPAN LOKAL
+            </div>
           )}
         </div>
         
         <div className="flex flex-1 overflow-hidden">
-          <div className="w-72 bg-slate-900 border-r border-slate-800 p-6 flex flex-col gap-2">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-2">Menu Kategori</p>
+          {/* Sidebar */}
+          <div className="w-64 bg-slate-900 border-r border-slate-800 p-2 space-y-1">
             {menus.map((m) => (
-              <button key={m.id}
-                onClick={() => { setMenu(m.id); setViewMode("list"); }}
-                className={`flex items-center gap-3 px-4 py-4 rounded-2xl font-bold text-sm transition-all duration-200 border ${
-                  menu === m.id ? (m.id === 'pilih' ? "bg-slate-800 text-white shadow-lg border-slate-700" : m.id === 'riwayat' ? "bg-emerald-900/50 text-emerald-400 border-emerald-800/50 shadow-lg" : "bg-blue-900/40 text-blue-300 border-blue-800/50 shadow-lg") : "border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                }`}
-              >
+              <button key={m.id} onClick={() => { setMenu(m.id); setViewMode("list"); }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded text-[13px] font-medium transition ${menu === m.id ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-800/50"}`}>
                 {m.icon} {m.label}
               </button>
             ))}
           </div>
 
-          <div className="flex-1 overflow-auto bg-slate-950 p-10 custom-scrollbar relative">
-            <div className="bg-slate-900 mx-auto shadow-sm border border-slate-800 p-10 rounded-3xl w-full min-h-full transition-all">
-              
+          {/* Konten Tab */}
+          <div className="flex-1 overflow-auto bg-slate-950 p-8 custom-scrollbar">
+            <div className="max-w-4xl mx-auto">
               {menu === "pilih" && <PilihTemplate masterData={masterData} handleActiveChange={handleActiveChange} />}
               {menu === "profil" && <Profil masterData={masterData} viewMode={viewMode} setViewMode={setViewMode} formData={formData} setFormData={setFormData} triggerDelete={triggerDelete} />}
               {menu === "tujuan" && <Tujuan masterData={masterData} viewMode={viewMode} setViewMode={setViewMode} formData={formData} setFormData={setFormData} triggerDelete={triggerDelete} />}
@@ -217,7 +201,6 @@ export default function TemplateEditor({ masterData, setMasterData, onBack, onLo
               {menu === "tembusan" && <Tembusan masterData={masterData} viewMode={viewMode} setViewMode={setViewMode} formData={formData} setFormData={setFormData} triggerDelete={triggerDelete} />}
               {menu === "kios" && <Kios masterData={masterData} viewMode={viewMode} setViewMode={setViewMode} formData={formData} setFormData={setFormData} triggerDelete={triggerDelete} />}
               {menu === "riwayat" && <Riwayat masterData={masterData} triggerDeleteHistory={triggerDeleteHistory} triggerLoadHistory={triggerLoadHistory} onReExportHistory={onReExportHistory} showToast={showToast} />}
-
             </div>
           </div>
         </div>
