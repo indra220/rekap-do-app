@@ -26,9 +26,12 @@ jobs:
       - name: 3. Memasang Dependencies
         run: npm install
 
-      - name: 4. Build Aplikasi (Tanpa auto-publish)
+      - name: 4. Build Aplikasi
         shell: bash
         env:
+          # Di sinilah server GitHub menggantikan peran file .env lokal Anda.
+          # GitHub menyediakan token sementara agar electron-builder memiliki akses.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FULL_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Mengambil KESELURUHAN baris deskripsi commit tanpa terpotong
@@ -45,8 +48,7 @@ jobs:
           echo "Fail update-config.json berjaya dibuat:"
           cat update-config.json
 
-          # Menjalankan build biasa. electron-builder akan tetap membuat latest.yml 
-          # karena block "publish" sudah ada di package.json, tapi tidak akan langsung upload
+          # Menjalankan build biasa
           npm run dist
 
       - name: 5. Mengunggah file Installer dan latest.yml ke GitHub Release
