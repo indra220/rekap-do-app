@@ -1,4 +1,3 @@
-/* eslint-disable */
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const serve = require('electron-serve');
@@ -161,17 +160,10 @@ const createWindow = () => {
     loadDevServer();
   }
 
-  // Konfigurasi Auto Updater untuk Repositori Publik
-  autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: 'indra220',
-    repo: 'rekap-do-app'
-  });
-
+  // Mengandalkan app-update.yml bawaan dari package.json publish config
   autoUpdater.autoDownload = false;
 
   mainWindow.webContents.once('did-finish-load', () => {
-    // Langsung cek update karena repo sudah publik
     autoUpdater.checkForUpdates();
   });
 };
