@@ -26,11 +26,11 @@ jobs:
       - name: 3. Sinkronisasi Versi package.json Otomatis dari Git Tag
         shell: bash
         run: |
-          # Mengekstrak angka dari tag (contoh: refs/tags/v1.0.44 menjadi 1.0.44)
+          # Mengekstrak angka dari tag (contoh: refs/tags/v1.0.45 menjadi 1.0.45)
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "Mendeteksi rilis versi: $VERSION"
           
-          # Memperbarui package.json secara instan di server CI (tanpa membuat commit baru)
+          # Memperbarui package.json secara instan di server CI
           npm version $VERSION --no-git-tag-version
           
           echo "Versi package.json berhasil diubah ke $VERSION untuk build ini."
@@ -44,7 +44,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FULL_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          # Mengambil KESELURUHAN baris deskripsi commit tanpa terpotong
           SAFE_MSG=$(echo "$FULL_COMMIT_MSG" | python3 -c "import sys, json; text = sys.stdin.read().strip(); print(json.dumps(text).strip('\"'))")
 
           cat <<EOF > update-config.json
@@ -58,13 +57,13 @@ jobs:
           echo "Fail update-config.json berjaya dibuat:"
           cat update-config.json
 
-          # Menjalankan build biasa
-          npm run dist
+          # Paksa electron-builder untuk TIDAK membuat rilis di GitHub secara mandiri, 
+          # tetapi tetap mengizinkannya membuat file latest.yml
+          npm run dist -- -p never
 
       - name: 6. Mengunggah file Installer dan latest.yml ke GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          # Secara eksplisit dan paksa mengunggah semua file hasil build
           files: |
             dist/*.exe
             dist/*.blockmap
