@@ -23,14 +23,24 @@ jobs:
           node-version: 24
           cache: 'npm'
 
-      - name: 3. Memasang Dependencies
+      - name: 3. Sinkronisasi Versi package.json Otomatis dari Git Tag
+        shell: bash
+        run: |
+          # Mengekstrak angka dari tag (contoh: refs/tags/v1.0.44 menjadi 1.0.44)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Mendeteksi rilis versi: $VERSION"
+          
+          # Memperbarui package.json secara instan di server CI (tanpa membuat commit baru)
+          npm version $VERSION --no-git-tag-version
+          
+          echo "Versi package.json berhasil diubah ke $VERSION untuk build ini."
+
+      - name: 4. Memasang Dependencies
         run: npm install
 
-      - name: 4. Build Aplikasi
+      - name: 5. Build Aplikasi
         shell: bash
         env:
-          # Di sinilah server GitHub menggantikan peran file .env lokal Anda.
-          # GitHub menyediakan token sementara agar electron-builder memiliki akses.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FULL_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
@@ -51,7 +61,7 @@ jobs:
           # Menjalankan build biasa
           npm run dist
 
-      - name: 5. Mengunggah file Installer dan latest.yml ke GitHub Release
+      - name: 6. Mengunggah file Installer dan latest.yml ke GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           # Secara eksplisit dan paksa mengunggah semua file hasil build
