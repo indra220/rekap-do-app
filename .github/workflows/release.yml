@@ -26,14 +26,15 @@ jobs:
       - name: 3. Sinkronisasi Versi package.json Otomatis dari Git Tag
         shell: bash
         run: |
-          # Mengekstrak angka dari tag (contoh: refs/tags/v1.0.45 menjadi 1.0.45)
+          # Mengekstrak angka dari tag (contoh: refs/tags/v1.0.47 menjadi 1.0.47)
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "Mendeteksi rilis versi: $VERSION"
           
           # Memperbarui package.json secara instan di server CI
-          npm version $VERSION --no-git-tag-version
+          # Menggunakan --allow-same-version agar tidak error jika versi sudah sama
+          npm version $VERSION --no-git-tag-version --allow-same-version
           
-          echo "Versi package.json berhasil diubah ke $VERSION untuk build ini."
+          echo "Versi package.json berhasil disinkronisasi ke $VERSION untuk build ini."
 
       - name: 4. Memasang Dependencies
         run: npm install
